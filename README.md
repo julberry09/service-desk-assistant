@@ -180,31 +180,21 @@ cd platform_assistant/
 streamlit run ui.py --server.port 8507
 ```
 
-#### 📌 백엔드 & UI를 같은 터미널에서 실행하기 (예: Jupyter Notebook)
+#### 📌 백엔드 & UI를 같은 터미널에서 실행하기 (Jupyter Notebook 버튼실행 불가할때)
 
 하나의 터미널에서 모두 실행하려면 **백엔드 서버를 백그라운드 실행** 후 UI를 띄우면 됩니다.
 
 **1. FastAPI 서버 백그라운드 실행**
 ```bash
+# nohup은 터미널을 닫아도 프로세스를 유지하게 해주는 명령어입니다.
 nohup python -m platform_service.api --port 8001 &
 ```
 
 **2. Streamlit UI 실행**
 ```bash
-python -m streamlit run platform_assistant/ui.py --server.port=8507
-```
-
-```bash
-# nohup은 터미널을 닫아도 프로세스를 유지하게 해주는 명령어입니다.
-nohup python -m platform_service.api --port 8001 &
-```
-
-Streamlit UI 실행
-이제 API 서버가 백그라운드에서 실행 중이므로, 같은 터미널에서 Streamlit UI를 실행합니다.
-
-```bash
 python -m streamlit run platform_assistant/ui.py 
 ```
+API 서버가 백그라운드에서 실행 중이므로, 같은 터미널에서 Streamlit UI를 실행합니다.
 이제 웹 브라우저에서 https://ai*lab.s***/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
 
 
@@ -221,8 +211,6 @@ python -m streamlit run platform_assistant/ui.py
 👉 권장 방법: **`python -m`** 방식으로 실행하면 디렉토리 이동 없이 항상 안정적으로 실행됩니다.
 
 실행 후 웹 브라우저에서 [http://localhost:8507](http://localhost:8507) 접속 시 챗봇 UI를 사용할 수 있습니다.
-
-
 
 
 ### 5단계: 단위 테스트 실행
@@ -359,7 +347,7 @@ ruff check . --fix
 ## 👩‍💻 소스 다운로드
 ```
 ### 소스 다운로드
-$ git clone https://github.com/julberry09/helpdesk-bot.git
+$ git clone https://github.com/julberry09/service-desk-assistant.git
 
 ### 파일 추가 / 수정
 $ git pull

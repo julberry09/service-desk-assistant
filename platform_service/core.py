@@ -409,7 +409,9 @@ def node_direct_tool(state: BotState) -> BotState:
         res = tool_request_id.invoke({})
     elif tool_name == "tool_owner_lookup":
         # 수정: payload 인자를 직접 전달
-        res = tool_owner_lookup.invoke(payload)
+        #res = tool_owner_lookup.invoke(payload)
+        #res = tool_owner_lookup.invoke(**payload)
+        res = tool_owner_lookup.invoke(input=payload)
     else:
         res = {"ok": False, "message": "알 수 없는 도구 호출"}
     
@@ -542,10 +544,9 @@ def pipeline(question: str, session_id: str) -> Dict[str, Any]:
     else:
         # 폴백 모드
         logger.info("풀백 파이프라인")
-        # 3. 인사말 처리
-        logger.error(f"질문이 입력되었나?: {question.lower().strip()}")
+        # 1. 인사말 처리
+        logger.error(f"풀백 파이프라인 - 질문은?: {question.lower().strip()}")
         if question.lower().strip() in constants.GREETINGS:
-            logger.error(f"리턴은??")
             return {
                 "reply": "네, 반갑습니다. 문의사항을 말씀해 주시면 제가 도와드릴게요.",
                 "intent": "greeting",
@@ -569,32 +570,28 @@ def pipeline(question: str, session_id: str) -> Dict[str, Any]:
                 "intent": "direct_tool",
                 "sources": []
             }
-            
         if "담당자" in question:
-            screen = "인사시스템-사용자관리" if "인사시스템" in question else "담당자 조회"
-            
-            # Pydantic 오류 수정: payload 인자를 딕셔너리로 래핑
-            # 기존 코드: res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
-            # tool_owner_lookup 함수는 payload 자체를 인자로 받으므로,
-            # 아래와 같이 `payload` 변수에 딕셔너리를 담아 직접 전달해야 합니다.
-            
-            # 수정된 코드: payload 변수에 딕셔너리 할당
-            payload = {"screen": screen}
-            # 수정된 코드: invoke 호출 시 payload 변수 직접 전달
-            res = tool_owner_lookup.invoke(payload)
-            
-            if res.get("ok"):
-                reply = f"👤 '{res.get('screen')}' 담당자\n- 이름: {res.get('owner', {}).get('owner')}\n- 이메일: {res.get('owner', {}).get('email')}\n- 연락처: {res.get('owner', {}).get('phone')}"
+            screen = "인사시스템-사용자관리" if "인사시스템" in question else None # screen이 없을 경우 None으로 설정
+            if screen:
+                payload = {"screen": screen}
+                # Pydantic 오류 수정: payload 인자를 딕셔너리로 래핑
+                #res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
+                #res = tool_owner_lookup.invoke(payload)
+                #res = tool_owner_lookup.invoke(**payload) # **로 언팩하여 호출
+                res = tool_owner_lookup.invoke(input=payload) # 수정된 호출 방식
             else:
-                reply = f"❗{res.get('message', '조회 실패')}"
-                
-            return {
-                "reply": reply,
-                "intent": "direct_tool",
-                "sources": []
-            }
-        
-        # 1. FAQ 검색을 도구 키워드보다 먼저 수행하여 RAG 테스트 통과
+                # screen이 없는 경우, 빈 딕셔너리를 input으로 전달
+                #res = tool_owner_lookup.invoke({})
+                res = tool_owner_lookup.invoke(input={})
+                # 담당자 목록 전체를 안내하는 메시지를 반환
+                reply = "담당자를 찾기 위한 화면이나 메뉴 정보가 필요합니다. 예: '재무시스템 담당자 알려줘'"
+                return {
+                    "reply": reply,
+                    "intent": "direct_tool",
+                    "sources": []
+                }
+
+        # 3. FAQ 검색을 도구 키워드보다 먼저 수행하여 RAG 테스트 통과
         faq_item = find_similar_faq(question)
         if faq_item:
             return {

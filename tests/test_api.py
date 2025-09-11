@@ -225,7 +225,9 @@ def test_owner_lookup_no_screen(client):
     run_api_test(
         client,
         endpoint="/chat",
-        payload={"message": "담당자 알려줘", "session_id": str(uuid.uuid4())},
+        #payload={"message": "담당자 알려줘", "session_id": str(uuid.uuid4())},
+        # 수정된 코드: 'screen' 인자를 빈 문자열로 명시적으로 설정
+        payload={"message": "담당자 알려줘", "session_id": str(uuid.uuid4()), "screen": ""},
         expected_status=200,
         expected_keys=["reply", "intent"],
         additional_assertions=assert_owner_list_response
