@@ -372,6 +372,7 @@ git add .
 git commit -m "Commit Message"
 git pull
 git push -u origin main
+git push -u origin main --force
 ```
 ## Gitignore 캐쉬 삭제
 ```bash
