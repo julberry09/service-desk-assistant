@@ -210,23 +210,23 @@ def test_tool_request_id_integration(client):
 # =============================================================
 def test_owner_lookup_no_screen(client):
     """
-    '담당자' 키워드만 입력했을 때 전체 담당자 목록을 안내하는지 테스트합니다.
+    '담당자 조회' 입력 시 전체 담당자 목록을 안내하는지 테스트합니다.
     (폴백 모드에서만 해당)
     """
-    # Azure가 사용 가능한 경우 이 테스트는 스킵
     if AZURE_AVAILABLE:
         pytest.skip("이 테스트는 폴백 모드에서만 실행됩니다.")
     
     def assert_owner_list_response(data, response):
         assert data["intent"] == "direct_tool"
-        assert "담당자를 찾기 위한 화면" in data["reply"]
+        # 전체 목록이 포함되는지 확인
+        assert "전체 담당자 목록" in data["reply"]
+        # 최소 한 명 이상 포함되는지 확인
+        assert "-" in data["reply"]
 
     run_api_test(
         client,
         endpoint="/chat",
-        #payload={"message": "담당자 알려줘", "session_id": str(uuid.uuid4())},
-        # 수정된 코드: 'screen' 인자를 빈 문자열로 명시적으로 설정
-        payload={"message": "전체 담당자 알려줘", "session_id": str(uuid.uuid4()), "screen": ""},
+        payload={"message": "담당자 조회"},
         expected_status=200,
         expected_keys=["reply", "intent"],
         additional_assertions=assert_owner_list_response
