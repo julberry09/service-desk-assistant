@@ -179,22 +179,20 @@ python -m streamlit run platform_assistant/ui.py --server.port 8507
 cd platform_assistant/
 streamlit run ui.py --server.port 8507
 ```
+---
+#### 📌 백엔드 & UI를 같은 터미널에서 실행하기 (예: Jupyter Notebook)
 
+하나의 터미널에서 모두 실행하려면 **백엔드 서버를 백그라운드 실행** 후 UI를 띄우면 됩니다.
 
-📌 Streamlit 명령어의 작동 원리
-프로젝트 구조가 변경되면서 Streamlit 실행 명령어가 달라졌습니다. 이는 명령어가 실행되는 위치와 Python 모듈 시스템에 따라 다르게 작동하기 때문입니다.
+**1. FastAPI 서버 백그라운드 실행**
+```bash
+nohup python -m platform_service.api --port 8001 &
+```
 
-streamlit run <파일_경로>: 이 명령어는 현재 작업 디렉토리를 기준으로 <파일_경로>를 찾습니다. 따라서 ui.py가 있는 platform_assistant 폴더로 이동해야만 올바르게 실행됩니다.
-
-python -m streamlit run <파일_경로>: 이 명령어는 Python 모듈 시스템을 통해 streamlit을 실행합니다. python -m은 프로젝트의 모든 경로를 인식하게 해주므로, 프로젝트의 최상위 폴더에서 경로를 명확히 지정해주는 것이 가능합니다. 이는 더 안정적이고 범용적인 실행 방법입니다.
-
-이제 웹 브라우저에서 http://localhost:8507 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
-
-📌 같은 터미널에서 백엔드와 UI를 실행하는 방법 (Jupyter Notebook 등)
-Jupyter Notebook과 같이 하나의 터미널에서 모든 작업을 처리해야 하는 환경에서는 백엔드 서버를 백그라운드에서 실행하고 UI를 실행해야 합니다.
-
-FastAPI 서버 백그라운드 실행
-nohup과 & 명령어를 사용해 서버를 백그라운드 프로세스로 실행합니다. 이렇게 하면 터미널이 서버에 의해 점유되지 않아 다음 명령어를 바로 입력할 수 있습니다.
+**2. Streamlit UI 실행**
+```bash
+python -m streamlit run platform_assistant/ui.py --server.port=8507
+```
 
 ```bash
 # nohup은 터미널을 닫아도 프로세스를 유지하게 해주는 명령어입니다.
@@ -207,7 +205,24 @@ Streamlit UI 실행
 ```bash
 python -m streamlit run platform_assistant/ui.py 
 ```
-이제 웹 브라우저에서 https://aitalentlab.skax.co.kr/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
+이제 웹 브라우저에서 https://ai*lab.s**.co.kr/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
+
+---
+#### 📌 Streamlit 실행 가이드
+
+프로젝트 구조 변경으로 인해 실행 명령어가 달라질 수 있습니다.  
+**실행 위치와 방법**에 따라 아래 차이가 있습니다:
+
+| 방식 | 명령어 | 특징 |
+|------|--------|------|
+| **직접 실행** | `streamlit run platform_assistant/ui.py` | 현재 디렉토리를 기준으로 파일을 찾음 → `platform_assistant` 폴더에서 실행 필요 |
+| **모듈 실행 (권장)** | `python -m streamlit run platform_assistant/ui.py` | Python 모듈 시스템을 활용 → 프로젝트 루트에서 실행 가능, 더 안정적 |
+
+👉 권장 방법: **`python -m`** 방식으로 실행하면 디렉토리 이동 없이 항상 안정적으로 실행됩니다.
+
+실행 후 웹 브라우저에서 [http://localhost:8507](http://localhost:8507) 접속 시 챗봇 UI를 사용할 수 있습니다.
+
+---
 
 
 ### 5단계: 단위 테스트 실행
