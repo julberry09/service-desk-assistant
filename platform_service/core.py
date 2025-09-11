@@ -332,7 +332,23 @@ def node_finalize(state: BotState) -> BotState:
         elif res.get("tool_name") == "tool_request_id":
             text = f"🆔 ID 발급 신청 절차 안내\n\n" + "\n".join(f"{i+1}. {s}" for i,s in enumerate(res.get("steps", []))) if res.get("ok") else f"❗{res.get('message','실패')}"  
         elif res.get("tool_name") == "tool_owner_lookup":
-            text = f"👤 '{res.get('screen')}' 담당자\n- 이름: {res.get('owner', {}).get('owner')}\n- 이메일: {res.get('owner', {}).get('email')}\n- 연락처: {res.get('owner', {}).get('phone')}" if res.get("ok") else f"❗{res.get('message','조회 실패')}"
+            if "owners" in res:  # ✅ 전체 조회 케이스
+                lines = ["📋 전체 담당자 목록:"]
+                for o in res["owners"]:
+                    lines.append(
+                        f"- 화면: {o.get('screen')} / 이름: {o.get('owner')} / "
+                        f"이메일: {o.get('email')} / 연락처: {o.get('phone')}"
+                    )
+                text = "\n".join(lines)
+            else:  # ✅ 기존 단일 담당자 조회
+                text = (
+                    f"👤 '{res.get('screen')}' 담당자\n"
+                    f"- 이름: {res.get('owner', {}).get('owner')}\n"
+                    f"- 이메일: {res.get('owner', {}).get('email')}\n"
+                    f"- 연락처: {res.get('owner', {}).get('phone')}"
+                    if res.get("ok")
+                    else f"❗{res.get('message','조회 실패')}"
+                )
         else: # FAQ도 여기서 처리
             text = res.get("answer", "죄송합니다. 답변을 찾지 못했습니다.")
         # 💡 수정: 반환 키를 'reply'로 통일
