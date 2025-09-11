@@ -17,7 +17,7 @@ from platform_service import pipeline, build_or_load_vectorstore, AZURE_AVAILABL
 logger = logging.getLogger(__name__)
 
 # API 상태를 확인하는 함수 (60초 동안 결과를 캐시하여 성능 저하 방지)
-@st.cache_data(ttl=180)
+@st.cache_data(ttl=60)
 def check_api_health(api_base_url):
     """API 서버의 /health 엔드포인트를 확인하여 상태를 반환합니다."""
     try:

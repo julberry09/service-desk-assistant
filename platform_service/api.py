@@ -28,7 +28,7 @@ async def lifespan(api: FastAPI):
     try:
         # 서버 시작 시 기본 KB 문서를 로드하여 벡터스토어 생성
         if AZURE_AVAILABLE:
-            from platform_service import build_or_load_vectorstore
+            #from platform_service import build_or_load_vectorstore
             build_or_load_vectorstore()
             logger.info("✅ 기본 KB 문서를 벡터스토어에 로드 완료 (kb_default, kb_data)")
         else:

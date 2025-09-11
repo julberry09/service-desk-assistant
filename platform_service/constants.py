@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 KB_DATA_DIR = BASE_DIR / "kb_data"
 KB_DEFAULT_DIR = BASE_DIR / "kb_default"
 INDEX_DIR = BASE_DIR / "indexes"
-
+INDEX_NAME = "faiss_index"
 
 # 상수 항목 및 샘플데이터
 OWNER_FALLBACK = {
