@@ -161,7 +161,7 @@ source .venv/Scripts/activate
 **- 터미널 1: FastAPI 백엔드 실행**
 ```bash
 # 서버 실행
-python -m platform_service.api --port 8001 
+python -m platform_service.api --port 8002 
 
 ```
 ```bash
@@ -225,8 +225,8 @@ platform_service 모듈을 찾을 수 없는 문제는 일반적으로 패키지
 ```bash
 # 기존 패키지 언인스톨
 pip uninstall service-desk-assistant -y
-# 기존 패키지 언인스톨
-python -m streamlit run platform_assistant/ui.py 
+# 재설치
+pip install -e .
 ```
 
 ### 5단계: 단위 테스트 실행

@@ -26,12 +26,15 @@ logger = logging.getLogger(__name__)
 async def lifespan(api: FastAPI):
     logger.info("Application starting up...")
     try:
-        # Okt 초기화 로직을 제거
-        # _ = get_okt()
-        # logger.info("Okt has been initialized successfully.")
-        pass # 빈 블록 유지
+        # 서버 시작 시 기본 KB 문서를 로드하여 벡터스토어 생성
+        if AZURE_AVAILABLE:
+            from platform_service import build_or_load_vectorstore
+            build_or_load_vectorstore()
+            logger.info("✅ 기본 KB 문서를 벡터스토어에 로드 완료 (kb_default, kb_data)")
+        else:
+            logger.warning("⚠️ Azure OpenAI 설정이 없어 기본 KB 로드는 건너뜁니다.")
     except Exception as e:
-        logger.error(f"Failed to initialize Okt/JVM: {e}")
+        logger.error(f"Failed to initialize vectorstore: {e}")
     yield
     logger.info("Application shutting down.")
 

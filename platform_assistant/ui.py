@@ -1,6 +1,11 @@
 # platform_assistant/ui.py
 
 import os
+import sys
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parents[1]  # platform_assistant의 상위 = 프로젝트 루트
+SRC_DIR = BASE_DIR / "platform_service"
+sys.path.insert(0, str(BASE_DIR))  # 루트를 sys.path에 추가해야 함
 import streamlit as st
 import httpx
 import uuid

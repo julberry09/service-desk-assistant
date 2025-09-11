@@ -293,13 +293,33 @@ def tool_owner_lookup(payload: Dict[str, Any]) -> Dict[str, Any]:
 # Prompt Engineering - 프롬프트 최적화 (역할 부여 + Chain-of-Thought) [checklist: 1] 
 def node_rag(state: BotState) -> BotState:
     docs = retriever(k=4).get_relevant_documents(state["question"])
+    
+    # ✅ 검색 결과가 전혀 없으면 → 일반 LLM 답변
+    if not docs:
+        llm = make_llm(model=AOAI_DEPLOY_GPT4O)
+        sys_prompt = "너는 사내 헬프데스크 상담원이다. 내부 문서에 없는 질문이라도 일반 지식을 활용해 한국어로 답해라."
+        out = llm.invoke([
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": state["question"]}
+        ]).content
+        return {**state, "reply": out, "sources": []}
+
+    # ✅ 검색 결과가 있으면 → RAG 기반 답변
     context = "\n\n".join([f"[{i+1}] {d.page_content[:1200]}" for i, d in enumerate(docs)])
     sources = [{"index": i+1, "source": d.metadata.get("source","unknown"), "page": d.metadata.get("page")} for i,d in enumerate(docs)]
     llm = make_llm(model=AOAI_DEPLOY_GPT4O)
-    sys_prompt = "너는 사내 헬프데스크 상담원이다. 컨텍스트를 기반으로 실행 가능한 답변을 한국어로 작성해라. 컨텍스트에 없는 내용을 지어내지 마라."
+    sys_prompt = (
+        "너는 사내 헬프데스크 상담원이다. "
+        "가능하면 제공된 컨텍스트를 활용해 답변하되, "
+        "부족하면 일반 지식을 보완해서 답해라. "
+        "추가 확인이 필요하면 '정확한 정책은 사내 포털에서 확인 필요'라고 말해라."
+    )
     user_prompt = f"질문:\n{state['question']}\n\n컨텍스트:\n{context}"
-    # 💡 수정: LLM 반환 값을 'reply' 키로 저장
-    out = llm.invoke([{"role":"system","content":sys_prompt},{"role":"user","content":user_prompt}]).content
+    out = llm.invoke([
+        {"role": "system", "content": sys_prompt},
+        {"role": "user", "content": user_prompt}
+    ]).content
+    
     return {**state, "reply": out, "sources": sources}
 
 # 도구(Tool) 함수 결과 사용자 친화적인 형태로 변환
@@ -458,10 +478,18 @@ def node_direct_tool(state: BotState) -> BotState:
     elif tool_name == "tool_request_id":
         res = tool_request_id.invoke({})
     elif tool_name == "tool_owner_lookup":
-        # 수정: payload 인자를 직접 전달
-        #res = tool_owner_lookup.invoke(payload)
-        #res = tool_owner_lookup.invoke(**payload)
-        res = tool_owner_lookup.invoke(input=payload)
+        # ✅ 전체 조회 예외 처리
+        query_text = state.get("question", "")
+        if "전체" in query_text or "모두" in query_text or "리스트" in query_text:
+            from platform_service.core import load_owner_data
+            owners = load_owner_data()
+            res = {
+                "ok": True,
+                "tool_name": "tool_owner_lookup",
+                "owners": owners
+            }
+        else:
+            res = tool_owner_lookup.invoke({"payload": payload})
     else:
         res = {"ok": False, "message": "알 수 없는 도구 호출"}
     
