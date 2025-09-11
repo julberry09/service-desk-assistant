@@ -57,7 +57,9 @@ if not AZURE_AVAILABLE:
 # Okt 형태소 분석기 - Lazy Initialization (Thread-Safe)
 _okt = None
 _okt_lock = threading.Lock()
+
 _faq_data = None   # FAQ 데이터 캐시 전역변수
+_owner_data = None
 
 class _DummyOkt:
     """pytest 전용: JVM 없이 최소 기능만 제공하는 더미 분석기"""
@@ -128,7 +130,7 @@ def _make_embedder() -> AzureOpenAIEmbeddings:
 def _load_docs_from_kb() -> List[Document]:
     docs: List[Document] = []
     
-    # kb_default 폴더의 FAQ 데이터 포함
+    # FAQ 문서 추가
     faq_data = load_faq_data()
     if faq_data:
         docs.extend([
@@ -138,7 +140,17 @@ def _load_docs_from_kb() -> List[Document]:
             ) for item in faq_data
         ])
 
-    # 기존 로직 (kb_default/kb_data의 기타 문서들 로드)
+    # OWNER 문서 추가
+    owner_data = load_owner_data()
+    if owner_data:
+        docs.extend([
+            Document(
+                page_content=f"화면: {item.get('screen')}\n담당자: {item.get('owner')}\n이메일: {item.get('email')}\n연락처: {item.get('phone')}",
+                metadata={"source": "owners.csv"}
+            ) for item in owner_data
+        ])
+
+    # 기타 문서 로드 (기존 유지)
     for kb_path in [constants.KB_DEFAULT_DIR, constants.KB_DATA_DIR]:
         if not kb_path.exists():
             kb_path.mkdir(parents=True, exist_ok=True)
@@ -260,12 +272,22 @@ def tool_owner_lookup(payload: Dict[str, Any]) -> Dict[str, Any]:
     """화면이나 메뉴의 담당자 정보를 조회합니다. `screen` 인자가 필요합니다."""
     try:
         screen = payload.get("screen") or ""
-        info = constants.OWNER_FALLBACK.get(screen)
-        if not info:
-            return {"ok": False, "message": f"'{screen}' 담당자 정보를 찾지 못했습니다."}
-        return {"ok": True, "screen": screen, "owner": info}
+        # owner.csv 데이터 검색
+        owner_data = load_owner_data()
+        for item in owner_data:
+            if screen in item.get("screen", ""):
+                return {
+                    "ok": True,
+                    "screen": item.get("screen"),
+                    "owner": {
+                        "owner": item.get("owner"),
+                        "email": item.get("email"),
+                        "phone": item.get("phone")
+                    }
+                }
+        return {"ok": False, "message": f"'{screen}' 담당자 정보를 찾지 못했습니다."}
     except Exception as e:
-        return {"ok": False, "message": f"도구 실행 중 오류가 발생했습니다: {str(e)}"}
+        return {"ok": False, "message": f"도구 실행 중 오류 발생: {str(e)}"}
 
 # RAG - 사전 정의된 데이터(문서)를 검색하여 AI의 논리력을 보강/ RAG 기반 지식 검색 기능 구현 [checklist: 8,9] 
 # Prompt Engineering - 프롬프트 최적화 (역할 부여 + Chain-of-Thought) [checklist: 1] 
@@ -300,6 +322,33 @@ def node_finalize(state: BotState) -> BotState:
 # =============================================================
 # 4. LangGraph Workflow 및 노드 정의
 # ==========================================================
+def load_owner_data() -> List[Dict[str, str]]:
+    global _owner_data
+    if _owner_data is not None:
+        return _owner_data
+
+    owner_file_path = constants.KB_DATA_DIR / "owners.csv"
+    if not owner_file_path.exists():
+        logger.warning(f"OWNER 파일이 존재하지 않습니다: {owner_file_path}")
+        _owner_data = []
+        return _owner_data
+
+    loaded_data = []
+    try:
+        # UTF-8 with BOM도 안전하게 처리
+        with open(owner_file_path, mode='r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if "screen" in row and "owner" in row:
+                    # 형태소 분석 불필요 → 그대로 저장
+                    loaded_data.append(row)
+        logger.info(f"{len(loaded_data)}개의 OWNER 데이터를 로드했습니다.")
+    except Exception as e:
+        logger.error(f"OWNER 파일 로드 실패: {e}")
+        loaded_data = []
+    _owner_data = loaded_data
+    return _owner_data
+
 # LangChain & LangGraph - Multi-Agent Flow 설계 및 구현 [checklist: 3,4,5]
 # FAQ 데이터 로드
 def load_faq_data() -> List[Dict[str, str]]:
@@ -336,6 +385,7 @@ def load_faq_data() -> List[Dict[str, str]]:
 
 # FAQ 유사도 검색
 def find_similar_faq(question: str) -> Optional[Dict[str, Any]]:
+    logger.error(f"find_similar_faq - 질문은?: {question.lower().strip()}")
     faq_data = load_faq_data()
     if not faq_data: return None
     user_words = set(get_okt().phrases(question.lower()))
@@ -442,6 +492,7 @@ _memory_checkpointer = MemorySaver()
 _graph = None
 # StateGraph 클래스를 사용해 멀티 에이전트 워크플로우를 정의함
 def build_graph():
+    logger.info("build_graph")
     g = StateGraph(BotState)
     g.add_node("classify", node_classify)
     g.add_node("greeting", node_greeting)
@@ -496,7 +547,7 @@ def run_graph_pipeline(question: str, session_id: str) -> Dict[str, Any]:
     # LangGraph Studio (UI 기반 그래프 시각화 툴)를 활용하여 그래프 모니터링 및 디버깅 - hold
     # LangSmith 콜백 핸들러 설정
     langsmith_api_key = os.getenv("LANGSMITH_API_KEY")
-    langsmith_project_name = os.getenv("LANGSMITH_PROJECT", "Helpdesk Bot")
+    langsmith_project_name = os.getenv("LANGSMITH_PROJECT", "Servicedesk Bot")
     
     callbacks = None
     if langsmith_api_key:
@@ -571,26 +622,73 @@ def pipeline(question: str, session_id: str) -> Dict[str, Any]:
                 "sources": []
             }
         if "담당자" in question:
-            screen = "인사시스템-사용자관리" if "인사시스템" in question else None # screen이 없을 경우 None으로 설정
-            if screen:
-                payload = {"screen": screen}
-                res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
-                # Pydantic 오류 수정: payload 인자를 딕셔너리로 래핑
-                #res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
-                #res = tool_owner_lookup.invoke(payload)
-                #res = tool_owner_lookup.invoke(**payload) # **로 언팩하여 호출
-                #res = tool_owner_lookup.invoke(input=payload) # 수정된 호출 방식
-            else:
-                # screen이 없는 경우, 빈 딕셔너리를 input으로 전달
-                #res = tool_owner_lookup.invoke({})
-                res = tool_owner_lookup.invoke(input={})
-                # 담당자 목록 전체를 안내하는 메시지를 반환
-                reply = "담당자를 찾기 위한 화면이나 메뉴 정보가 필요합니다. 예: '재무시스템 담당자 알려줘'"
+            logger.info("담당자 조회")
+            owner_data = load_owner_data()
+
+            # 1. 전체 조회 요청 처리
+            if "전체" in question or question.strip() == "담당자 조회":
+                if not owner_data:
+                    return {
+                        "reply": "등록된 담당자 정보가 없습니다.",
+                        "intent": "direct_tool",
+                        "sources": []
+                    }
+                reply_lines = ["📋 전체 담당자 목록"]
+                for item in owner_data:
+                    reply_lines.append(
+                        f"- {item.get('screen')}: {item.get('owner')} "
+                        f"(📧 {item.get('email')}, ☎ {item.get('phone')})"
+                    )
                 return {
-                    "reply": reply,
+                    "reply": "\n".join(reply_lines),
                     "intent": "direct_tool",
-                    "sources": []
+                    "sources": [{"source": "owner.csv"}]
                 }
+
+            # 2. 개별 screen 조회 처리 (정확히 일치할 때)
+            for item in owner_data:
+                
+                #if question.strip() == item.get("screen", "").strip():
+                if item.get("screen", "").strip() and item.get("screen", "").strip() in question:
+                    return {
+                        "reply": (
+                            f"👤 '{item.get('screen')}' 담당자\n"
+                            f"- 이름: {item.get('owner')}\n"
+                            f"- 이메일: {item.get('email')}\n"
+                            f"- 연락처: {item.get('phone')}"
+                        ),
+                        "intent": "direct_tool",
+                        "sources": [{"source": "owner.csv"}]
+                    }
+
+            # 3. 못 찾았을 때
+            return {
+                "reply": "담당자를 찾지 못했습니다. 화면/메뉴명을 정확히 입력해 주세요.",
+                "intent": "direct_tool",
+                "sources": []
+            }
+
+                # if "담당자" in question:
+        #     screen = "인사시스템-사용자관리" if "인사시스템" in question else None # screen이 없을 경우 None으로 설정
+        #     if screen:
+        #         payload = {"screen": screen}
+        #         res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
+        #         # Pydantic 오류 수정: payload 인자를 딕셔너리로 래핑
+        #         #res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
+        #         #res = tool_owner_lookup.invoke(payload)
+        #         #res = tool_owner_lookup.invoke(**payload) # **로 언팩하여 호출
+        #         #res = tool_owner_lookup.invoke(input=payload) # 수정된 호출 방식
+        #     else:
+        #         # screen이 없는 경우, 빈 딕셔너리를 input으로 전달
+        #         #res = tool_owner_lookup.invoke({})
+        #         res = tool_owner_lookup.invoke(input={})
+        #         # 담당자 목록 전체를 안내하는 메시지를 반환
+        #         reply = "담당자를 찾기 위한 화면이나 메뉴 정보가 필요합니다. 예: '재무시스템 담당자 알려줘'"
+        #         return {
+        #             "reply": reply,
+        #             "intent": "direct_tool",
+        #             "sources": []
+        #         }
 
         # 3. FAQ 검색을 도구 키워드보다 먼저 수행하여 RAG 테스트 통과
         faq_item = find_similar_faq(question)

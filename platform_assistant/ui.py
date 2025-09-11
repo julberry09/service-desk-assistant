@@ -176,6 +176,7 @@ def main():
                 #     st.session_state.chat.append(("assistant", reply))
                 if reply:
                     st.markdown(reply)
+                    st.session_state.chat.append(("assistant", reply))  # 항상 기록
                     if sources:
                         with st.expander("🔎 참고 자료"):
                             # 중복 소스를 제거하기 위한 리스트

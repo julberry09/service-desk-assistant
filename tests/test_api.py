@@ -11,6 +11,7 @@ import uuid
 from platform_service.api import api
 from platform_service import AZURE_AVAILABLE, build_or_load_vectorstore
 from platform_service.core import get_okt
+
 # =============================================================
 # Fixtures & Helpers
 # =============================================================
@@ -139,16 +140,17 @@ def test_tool_owner_lookup_integration(client):
     def assert_owner_lookup_response(data, response):
         if AZURE_AVAILABLE:
             assert data["intent"] == "agent_action"
-            assert "홍길동" in data["reply"]
+            assert "담당자" in data["reply"]
         else:
-            # 폴백 모드에서는 도구 함수를 직접 호출하므로 그에 맞춰 검증
             assert data["intent"] == "direct_tool"
             assert "담당자" in data["reply"]
-    
+            # owner.csv 기반 필드 검증
+            assert any(key in data["reply"] for key in ["이메일", "연락처", "이름"])
+
     run_api_test(
         client,
         endpoint="/chat",
-        payload={"message": "인사시스템 사용자관리 담당자 알려줘", "session_id": str(uuid.uuid4())},
+        payload={"message": "인사시스템-사용자관리 담당자 알려줘", "session_id": str(uuid.uuid4())},
         expected_status=200,
         expected_keys=["reply", "intent"],
         additional_assertions=assert_owner_lookup_response
@@ -190,7 +192,6 @@ def test_tool_request_id_integration(client):
         else:
             # 폴백 모드에서는 도구 함수를 직접 호출하므로 그에 맞춰 검증
             assert data["intent"] == "direct_tool"
-            # 수정: node_finalize의 변경된 답변 내용에 맞춰 검증
             assert "ID 발급 신청 절차 안내" in data["reply"]
             assert "HR 포털 접속" in data["reply"]
             assert len(data.get("sources", [])) == 0
@@ -207,7 +208,6 @@ def test_tool_request_id_integration(client):
 # =============================================================
 # 3. 새로운 테스트: 담당자 조회 시나리오
 # =============================================================
-
 def test_owner_lookup_no_screen(client):
     """
     '담당자' 키워드만 입력했을 때 전체 담당자 목록을 안내하는지 테스트합니다.
@@ -215,19 +215,18 @@ def test_owner_lookup_no_screen(client):
     """
     # Azure가 사용 가능한 경우 이 테스트는 스킵
     if AZURE_AVAILABLE:
-        pytest.skip("이 테스트는 폴백 모드(Azure 비활성화)에서만 실행됩니다.")
+        pytest.skip("이 테스트는 폴백 모드에서만 실행됩니다.")
     
     def assert_owner_list_response(data, response):
-        # 폴백 모드에서는 도구 함수를 직접 호출하므로 그에 맞춰 검증
         assert data["intent"] == "direct_tool"
-        assert "담당자" in data["reply"]
-    
+        assert "담당자를 찾기 위한 화면" in data["reply"]
+
     run_api_test(
         client,
         endpoint="/chat",
         #payload={"message": "담당자 알려줘", "session_id": str(uuid.uuid4())},
         # 수정된 코드: 'screen' 인자를 빈 문자열로 명시적으로 설정
-        payload={"message": "담당자 알려줘", "session_id": str(uuid.uuid4()), "screen": ""},
+        payload={"message": "전체 담당자 알려줘", "session_id": str(uuid.uuid4()), "screen": ""},
         expected_status=200,
         expected_keys=["reply", "intent"],
         additional_assertions=assert_owner_list_response
@@ -243,12 +242,13 @@ def test_owner_lookup_specific_screen(client):
         else:
             # 폴백 모드에서는 도구 함수를 직접 호출하므로 그에 맞춰 검증
             assert data["intent"] == "direct_tool"
-            assert "담당자" in data["reply"]
-    
+            assert "인사시스템" in data["reply"]
+            assert any(key in data["reply"] for key in ["이메일", "연락처", "이름"])
+
     run_api_test(
         client,
         endpoint="/chat",
-        payload={"message": "인사시스템 담당자 누구야?", "session_id": str(uuid.uuid4())},
+        payload={"message": "인사시스템-사용자관리 담당자 누구야?", "session_id": str(uuid.uuid4())},
         expected_status=200,
         expected_keys=["reply", "intent"],
         additional_assertions=assert_specific_owner_response

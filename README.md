@@ -197,6 +197,9 @@ python -m streamlit run platform_assistant/ui.py
 API 서버가 백그라운드에서 실행 중이므로, 같은 터미널에서 Streamlit UI를 실행합니다.
 이제 웹 브라우저에서 https://ai*lab.s***/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
 
+**3. 📝 Jupyter Notebook 사용자를 위한 팁**
+Jupyter Notebook 환경에서는 별도의 가상 환경(venv)을 만들 필요가 없습니다. 
+Notebook 자체가 커널을 통해 패키지 종속성을 관리하므로, 바로 아래 명령어를 실행하여 불필요한 설정 과정을 생략하고 개발 효율을 높일 수 있습니다.
 
 #### 📌 Streamlit 실행 가이드
 
@@ -234,7 +237,7 @@ python -m streamlit run platform_assistant/ui.py
 pytest
 
 # 테스트 수행 및 로그파일로 저장
-pytest > logs/test_results.txt
+pytest > logs/results.txt
  
 
 ```
