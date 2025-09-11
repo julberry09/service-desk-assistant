@@ -44,3 +44,8 @@ test = [
 where = ["platform_service"]
 include = ["platform_service*"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]   # tests/ 폴더만 테스트로 인식
+norecursedirs = ["logs"]
+
+
