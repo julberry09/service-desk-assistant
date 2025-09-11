@@ -179,7 +179,7 @@ python -m streamlit run platform_assistant/ui.py --server.port 8507
 cd platform_assistant/
 streamlit run ui.py --server.port 8507
 ```
----
+
 #### 📌 백엔드 & UI를 같은 터미널에서 실행하기 (예: Jupyter Notebook)
 
 하나의 터미널에서 모두 실행하려면 **백엔드 서버를 백그라운드 실행** 후 UI를 띄우면 됩니다.
@@ -207,7 +207,7 @@ python -m streamlit run platform_assistant/ui.py
 ```
 이제 웹 브라우저에서 https://ai*lab.s**.co.kr/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
 
----
+
 #### 📌 Streamlit 실행 가이드
 
 프로젝트 구조 변경으로 인해 실행 명령어가 달라질 수 있습니다.  
@@ -222,7 +222,7 @@ python -m streamlit run platform_assistant/ui.py
 
 실행 후 웹 브라우저에서 [http://localhost:8507](http://localhost:8507) 접속 시 챗봇 UI를 사용할 수 있습니다.
 
----
+
 
 
 ### 5단계: 단위 테스트 실행
