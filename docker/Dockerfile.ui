@@ -1,0 +1,24 @@
+# Dockerfile.ui
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# RUN pip install . 를 실행하면 pyproject.toml의 [project].dependencies를 설치합니다.
+# --no-cache-dir 옵션은 그대로 유지하고, 테스트 의존성은 설치하지 않아 이미지 용량이 최적화됩니다.
+
+#COPY requirements.txt /app/
+#RUN pip install --no-cache-dir -r requirements.txt
+
+COPY pyproject.toml /app/
+RUN pip install --no-cache-dir .
+
+#COPY . /app/
+COPY ./src/helpdesk_bot /app/helpdesk_bot
+
+EXPOSE 8501
+#CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+#CMD ["streamlit", "run", "ui.py", "--server.address=0.0.0.0", "--server.port=8501"]
+CMD ["streamlit", "run", "helpdesk_bot/ui.py", "--server.address=0.0.0.0", "--server.port=8501"]

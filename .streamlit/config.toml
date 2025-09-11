@@ -1,0 +1,13 @@
+# .streamlit/config.toml
+
+[server]
+headless = false
+
+[client]
+toolbarMode = "minimal"
+
+# [추가] 테마 설정
+[theme]
+# 사이드바의 너비를 픽셀(pixel) 단위로 설정합니다. (기본값: 304)
+# 원하는 크기로 숫자를 조절하세요.
+sidebarWidth = 350
