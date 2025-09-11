@@ -1,4 +1,4 @@
-# src/helpdesk_bot/core.py
+# platform_service/core.py
 
 # Standard library imports
 import os
@@ -30,47 +30,15 @@ from langgraph.graph import StateGraph, END
 # from langchain_community.callbacks.langsmith import LangSmithCallbackHandler
 
 # Local application imports
-from helpdesk_bot import constants
-#from . import constants
+from . import constants
+
+# 중앙 설정(logging_config.py)에서 세팅된 로거 불러오기
+logger = logging.getLogger(__name__)
+
 # =============================================================
 # 1. 공통 설정 / 환경 변수
 # =============================================================
 load_dotenv()
-
-# 로거 설정
-logger = logging.getLogger("helpdesk-bot")
-if not logger.handlers:
-    #LOG_DIR = Path("./logs")
-    # 경로 변수 정의
-    # 기존: LOG_DIR = Path("./logs")
-    # 수정:
-    # `Path(__file__).resolve().parent.parent.parent / "logs"`
-    # 이 코드는 현재 파일(core.py)의 위치에서 상위 폴더를 세 번 이동하여 프로젝트 루트로 이동합니다.
-    # 그리고 그 아래에 logs 폴더를 지정합니다.
-    LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
-    
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    
-    class _ConsoleFormatter(logging.Formatter):
-        def format(self, record):
-            base = {
-                "level": record.levelname,
-                "name": record.name,
-                "msg": record.getMessage(),
-                "source": f"{os.path.basename(record.pathname)}:{record.lineno}",
-                "function": record.funcName
-            }
-            if hasattr(record, "extra_data"):
-                base.update(record.extra_data)
-            return json.dumps(base, ensure_ascii=False)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(_ConsoleFormatter())
-    file_handler = logging.FileHandler(LOG_DIR / "app.log", encoding="utf-8")
-    file_handler.setFormatter(_ConsoleFormatter())
-    logger.setLevel(logging.INFO)
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
 
 # Azure OpenAI 환경변수
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT", "")

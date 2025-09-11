@@ -1,4 +1,4 @@
-# src/helpdesk_bot/constants.py
+# platform_service/constants.py
 
 from pathlib import Path
 

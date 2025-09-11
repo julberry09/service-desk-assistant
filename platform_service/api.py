@@ -1,16 +1,21 @@
-# api.py
+# platform_service/api.py
 
 import os
 import uvicorn
 import time as _time
 from typing import List, Dict, Any
-import contextlib # 💡 추가
+import contextlib
+import logging
 
 from fastapi import FastAPI, Body, Request
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from helpdesk_bot.core import pipeline, logger
+from platform_service import pipeline, build_or_load_vectorstore, AZURE_AVAILABLE, constants
+
+
+
+logger = logging.getLogger(__name__)
 
 # =============================================================
 # 1. FastAPI 앱 설정

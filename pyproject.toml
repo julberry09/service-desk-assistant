@@ -42,3 +42,5 @@ test = [
 
 [tool.setuptools.packages.find]
 where = ["platform_service"]
+include = ["platform_service*"]
+

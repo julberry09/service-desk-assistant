@@ -13,7 +13,7 @@
 ## 💡 주요 기능
 
 -   **대화형 서비스**: Streamlit UI를 통해 사용자 친화적인 챗봇 대화 환경을 제공합니다.
--   **RAG (Retrieval-Augmented Generation)**: `./kb` 폴더의 사내 매뉴얼이나 문서를 기반으로 정확하고 관련성 높은 답변을 생성합니다.
+-   **RAG (Retrieval-Augmented Generation)**: `./kb_data` 폴더의 사내 매뉴얼이나 문서를 기반으로 정확하고 관련성 높은 답변을 생성합니다.
 -   **LangGraph 기반 인텐트 라우팅**: 복잡한 사용자 의도를 분석하고, 일반 질의응답과 특정 기능 실행(툴 사용)을 유연하게 처리합니다.
 -   **미리 정의된 기능 (Tools)**:
     -   ID 발급 신청 안내
@@ -24,7 +24,7 @@
 
 ## 📄 프로젝트 구조
 
-전문적인 개발 및 유지보수를 위해 소스코드(`src`), Docker 설정(`docker`), 테스트(`tests`)를 명확히 분리한 구조를 따릅니다.
+전문적인 개발 및 유지보수를 위해 소스코드(`src`)를 `platform_assistant`와 `platform_service`로 명확히 분리하고, Docker 설정(`docker`), 테스트(`tests`)를 포함한 구조를 따릅니다.
 
 ```
 service-desk-assistant/
@@ -161,24 +161,33 @@ source .venv/Scripts/activate
 **- 터미널 1: FastAPI 백엔드 실행**
 ```bash
 # 서버 실행
-python -m helpdesk_bot.api --port 8001 
+python -m platform_service.api --port 8001 
 
 ```
 ```bash
 # 서버 연속 실행 (반영시 재기동 x)
-uvicorn helpdesk_bot.api:api --port 8001 --reload
+uvicorn platform_service.api:api --port 8001 --reload
 
 ```
-
-
 **- 터미널 2: Streamlit UI 실행**
 ```bash
-# UI 실행
-streamlit run src/helpdesk_bot/ui.py --server.port 8507
+# 프로젝트 최상위 폴더에서 실행 (권장)
+python -m streamlit run platform_assistant/ui.py --server.port 8507
+```
+```bash
+# 또는, ui.py가 있는 폴더로 이동하여 실행
+cd platform_assistant/
+streamlit run ui.py --server.port 8507
 ```
 
-이제 웹 브라우저에서 **[http://localhost:8507](http://localhost:8507)** 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
+📌 Streamlit 명령어의 작동 원리
+프로젝트 구조가 변경되면서 Streamlit 실행 명령어가 달라졌습니다. 이는 명령어가 실행되는 위치와 Python 모듈 시스템에 따라 다르게 작동하기 때문입니다.
 
+streamlit run <파일_경로>: 이 명령어는 현재 작업 디렉토리를 기준으로 <파일_경로>를 찾습니다. 따라서 ui.py가 있는 platform_assistant 폴더로 이동해야만 올바르게 실행됩니다.
+
+python -m streamlit run <파일_경로>: 이 명령어는 Python 모듈 시스템을 통해 streamlit을 실행합니다. python -m은 프로젝트의 모든 경로를 인식하게 해주므로, 프로젝트의 최상위 폴더에서 경로를 명확히 지정해주는 것이 가능합니다. 이는 더 안정적이고 범용적인 실행 방법입니다.
+
+이제 웹 브라우저에서 http://localhost:8507 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
 ### 5단계: 단위 테스트 실행
 프로젝트 최상위 폴더에서 아래 명령어를 실행하여 코드의 안정성을 검증합니다.
 

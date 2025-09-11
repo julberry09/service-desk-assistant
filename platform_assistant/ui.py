@@ -1,21 +1,15 @@
-# src/helpdesk_bot/ui.py
+# platform_assistant/ui.py
 
-import sys
 import os
-# sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(os.path.dirname(__file__)))))
-BASE_DIR = Path(__file__).resolve().parents[2]
-SRC_DIR = BASE_DIR / "src"
-sys.path.insert(0, str(SRC_DIR))
-
 import streamlit as st
 import httpx
 import uuid
-from helpdesk_bot.core import pipeline, build_or_load_vectorstore, AZURE_AVAILABLE
-# Local application imports
-from helpdesk_bot import constants
+import logging
+
+from platform_service import pipeline, build_or_load_vectorstore, AZURE_AVAILABLE, constants
 
 
-# from . import constants
+logger = logging.getLogger(__name__)
 
 # API 상태를 확인하는 함수 (60초 동안 결과를 캐시하여 성능 저하 방지)
 @st.cache_data(ttl=180)
@@ -85,7 +79,7 @@ def main():
             # # 이 부분에서 중첩된 st.columns를 제거합니다.
             # btn_left, btn_mid, btn_right = st.columns([0.05, 0.7, 0.25])
             # with btn_mid:
-            #     if st.button("Sync Content", disabled=not AZURE_AVAILABLE, use_container_width=True):
+            #     if st.butwqlton("Sync Content", disabled=not AZURE_AVAILABLE, use_container_width=True):
             #         try:
             #             for ext in [".faiss", ".pkl"]:
             #                 p = constants.INDEX_DIR / f"{constants.INDEX_NAME}{ext}"
