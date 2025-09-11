@@ -205,7 +205,7 @@ Streamlit UI 실행
 ```bash
 python -m streamlit run platform_assistant/ui.py 
 ```
-이제 웹 브라우저에서 https://ai*lab.s**.co.kr/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
+이제 웹 브라우저에서 https://ai*lab.s***/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
 
 
 #### 📌 Streamlit 실행 가이드
