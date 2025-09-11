@@ -574,11 +574,12 @@ def pipeline(question: str, session_id: str) -> Dict[str, Any]:
             screen = "인사시스템-사용자관리" if "인사시스템" in question else None # screen이 없을 경우 None으로 설정
             if screen:
                 payload = {"screen": screen}
+                res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
                 # Pydantic 오류 수정: payload 인자를 딕셔너리로 래핑
                 #res = tool_owner_lookup.invoke({"payload": {"screen": screen}})
                 #res = tool_owner_lookup.invoke(payload)
                 #res = tool_owner_lookup.invoke(**payload) # **로 언팩하여 호출
-                res = tool_owner_lookup.invoke(input=payload) # 수정된 호출 방식
+                #res = tool_owner_lookup.invoke(input=payload) # 수정된 호출 방식
             else:
                 # screen이 없는 경우, 빈 딕셔너리를 input으로 전달
                 #res = tool_owner_lookup.invoke({})

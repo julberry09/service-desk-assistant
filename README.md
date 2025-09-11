@@ -212,6 +212,19 @@ API 서버가 백그라운드에서 실행 중이므로, 같은 터미널에서 
 
 실행 후 웹 브라우저에서 [http://localhost:8507](http://localhost:8507) 접속 시 챗봇 UI를 사용할 수 있습니다.
 
+#### 📌 platform_service를 찾을 수 없는 이유 
+platform_service 모듈을 찾을 수 없는 문제는 일반적으로 패키지 설치 캐시가 꼬였을 때 발생합니다. 
+특히 이전에 프로젝트를 helpdesk-bot이라는 이름으로 설치했던 잔여 캐시가 남아있는 경우, 
+새롭게 설치한 service-desk-assistant 패키지와 충돌이 일어날 수 있습니다.
+기존에 설치된 캐시를 완전히 삭제하고, 프로젝트를 다시 설치해야 합니다.
+아래 명령어를 순서대로 실행하여 문제를 해결할 수 있습니다.
+
+```bash
+# 기존 패키지 언인스톨
+pip uninstall service-desk-assistant -y
+# 기존 패키지 언인스톨
+python -m streamlit run platform_assistant/ui.py 
+```
 
 ### 5단계: 단위 테스트 실행
 프로젝트 최상위 폴더에서 아래 명령어를 실행하여 코드의 안정성을 검증합니다.
@@ -345,22 +358,26 @@ ruff check . --fix
 ---
 
 ## 👩‍💻 소스 다운로드
-```
-### 소스 다운로드
-$ git clone https://github.com/julberry09/service-desk-assistant.git
 
+### 소스 다운로드
+```bash
+git clone https://github.com/julberry09/service-desk-assistant.git
+```
 ### 파일 추가 / 수정
-$ git pull
-$ git add .
-$ git commit -m "Commit Message"
-$ git pull
-$ git push -u origin main
+```bash
+git config --global user.email "jeongsunkim09@gmail.com"
+git config --global user.name "sunny"
+git pull
+git add .
+git commit -m "Commit Message"
+git pull
+git push -u origin main
 ```
 ## Gitignore 캐쉬 삭제
-```
-$ git rm -r --cached .
-$ git add .
-$ git commit -m "fixed untracked files"
+```bash
+git rm -r --cached .
+git add .
+git commit -m "fixed untracked files"
 ```
 ---
 
