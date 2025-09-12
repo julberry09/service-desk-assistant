@@ -13,7 +13,7 @@ from platform_service import constants
 
 
 logger = logging.getLogger(__name__)
-DB_PATH = constants.BASE_DIR / "history.db"
+DB_PATH = constants.KB_DATA_DIR / "history.db"
 
 # =============================================================
 # DB 초기화

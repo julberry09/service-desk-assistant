@@ -169,7 +169,22 @@ pip install -e ".[test]"
 # 3. 의존성 설치 (개발용 - langsmith 포함)
 pip install -e ".[test, langsmith]"
 ```
-
+```bash
+pip install python-multipart
+```
+```bash
+[project]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "python-dotenv",
+    "python-multipart",   # ✅ 이 줄 추가
+]
+```
+```bash
+pip install -e .
+```
 ### 4단계: 애플리케이션 실행
 API 서버와 UI를 각각 다른 터미널에서 실행해야 합니다. (각 터미널에서 가상환경 활성화 필요)
 
@@ -231,6 +246,11 @@ pytest -v > logs/results_ok.txt
  
 
 ```
+상세 로그 확인:
+```bash
+pytest -vv -s
+```
+
 `pytest`가 `tests` 폴더를 자동으로 찾아 모든 테스트를 실행하고, 전부 `PASSED`로 표시되면 성공입니다.
 
 테스트 커버리지:

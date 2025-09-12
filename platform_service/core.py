@@ -165,8 +165,14 @@ def _load_docs_from_kb() -> List[Document]:
     for kb_path in [constants.KB_DEFAULT_DIR, constants.KB_DATA_DIR]:
         if not kb_path.exists():
             kb_path.mkdir(parents=True, exist_ok=True)
-        for p in kb_path.rglob("*"):
-            if p.is_file() and p.name != "faq_data.csv":
+            for p in kb_path.rglob("*"):
+                # ✅ DB 파일(history.db 등)은 벡터화 대상에서 제외
+                if not p.is_file():
+                    continue
+                if p.suffix.lower() == ".db" or p.name == "history.db":
+                    continue
+                if p.name == "faq_data.csv":
+                    continue
                 try:
                     suf = p.suffix.lower()
                     if suf == ".pdf": docs.extend(PyPDFLoader(str(p)).load())
