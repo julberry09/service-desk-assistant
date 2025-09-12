@@ -6,19 +6,23 @@ import json
 import logging
 import csv
 import time as _time
-import threading 
+import threading
 from typing import TypedDict, List, Dict, Any, Optional
 from pathlib import Path
 
 # Third-party imports
 from dotenv import load_dotenv
 from konlpy.tag import Okt
+
+# LangChain & LangGraph 관련 라이브러리
 from langchain import hub
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 from langchain.tools import tool
-from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader, Docx2txtLoader
+from langchain_community.document_loaders import (
+    PyPDFLoader, CSVLoader, TextLoader, Docx2txtLoader
+)
 from langchain_community.vectorstores import FAISS
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -54,6 +58,10 @@ if not AZURE_AVAILABLE:
     logger.warning("Azure OpenAI 설정이 없어 폴백(Fallback) 모드로 동작합니다.")
 
 
+# =============================================================
+# 2. 공통 유틸
+# workflow/utils.py (형태소 분석기, 공용 유틸)
+# =============================================================
 # Okt 형태소 분석기 - Lazy Initialization (Thread-Safe)
 _okt = None
 _okt_lock = threading.Lock()
@@ -61,12 +69,14 @@ _okt_lock = threading.Lock()
 _faq_data = None   # FAQ 데이터 캐시 전역변수
 _owner_data = None
 
+
 class _DummyOkt:
     """pytest 전용: JVM 없이 최소 기능만 제공하는 더미 분석기"""
     def phrases(self, text: str):
         return [w for w in text.lower().split() if w]
     def nouns(self, text: str):
         return [w for w in text.lower().split() if w]
+
 
 def get_okt():
     """
@@ -113,7 +123,8 @@ def get_okt():
 #     return _okt_instance
 
 # =============================================================
-# 2. RAG 및 LLM 관련 함수 정의
+# 3. RAG 및 LLM 관련 함수 정의
+# workflow/vectorstore.py (벡터스토어 관리)
 # =============================================================
 # 임베딩 모델 생성
 def _make_embedder() -> AzureOpenAIEmbeddings:
@@ -128,8 +139,10 @@ def _make_embedder() -> AzureOpenAIEmbeddings:
 
 # RAG - 원본 데이터 수집 및 전처리 로직 [checklist: 6]
 def _load_docs_from_kb() -> List[Document]:
+    """
+    RAG - 원본 데이터 수집 및 전처리 로직
+    """
     docs: List[Document] = []
-    
     # FAQ 문서 추가
     faq_data = load_faq_data()
     if faq_data:
@@ -139,8 +152,7 @@ def _load_docs_from_kb() -> List[Document]:
                 metadata={"source": "faq_data.csv"}
             ) for item in faq_data
         ])
-
-    # OWNER 문서 추가
+    # 업무 담당자 문서 추가
     owner_data = load_owner_data()
     if owner_data:
         docs.extend([
@@ -149,8 +161,7 @@ def _load_docs_from_kb() -> List[Document]:
                 metadata={"source": "owners.csv"}
             ) for item in owner_data
         ])
-
-    # 기타 문서 로드 (기존 유지)
+    # 기타 문서 로드
     for kb_path in [constants.KB_DEFAULT_DIR, constants.KB_DATA_DIR]:
         if not kb_path.exists():
             kb_path.mkdir(parents=True, exist_ok=True)
@@ -168,15 +179,19 @@ def _load_docs_from_kb() -> List[Document]:
 
 # RAG - FAISS 기반의 Vector 스토어 구축 [checklist: 7]
 def build_or_load_vectorstore() -> FAISS:
+    """
+    RAG - FAISS 기반의 Vector 스토어 구축
+    """
     if not AZURE_AVAILABLE:
         raise RuntimeError("'Rebuild Index'는 Azure OpenAI 설정이 필요합니다.")
-        
     embed = _make_embedder()
     if (constants.INDEX_DIR / f"{constants.INDEX_NAME}.faiss").exists():
-        return FAISS.load_local(str(constants.INDEX_DIR / constants.INDEX_NAME), embeddings=embed, allow_dangerous_deserialization=True)
-
+        return FAISS.load_local(
+            str(constants.INDEX_DIR / constants.INDEX_NAME),
+            embeddings=embed,
+            allow_dangerous_deserialization=True
+        )
     raw_docs = _load_docs_from_kb()
-    
     if not raw_docs:
         faq_data = load_faq_data()
         if faq_data:
@@ -207,6 +222,7 @@ _vectorstore: Optional[FAISS] = None
 _vectorstore_lock = threading.Lock()
 
 def retriever(k: int = 4):
+    """RAG - 벡터스토어 retriever (Singleton Pattern)"""
     global _vectorstore
     if _vectorstore is None:
         with _vectorstore_lock:
@@ -237,42 +253,44 @@ def make_llm(model: str = AOAI_DEPLOY_GPT4O_MINI, temperature: float = 0.2) -> A
         temperature=temperature,
     )
 
+
 # =============================================================
-# 3. LangGraph 도구 정의
+# 4. LangGraph 도구 정의
+# workflow/tools.py (도구 정의)
 # =============================================================
-# 상태 관리 (State Management)
 class BotState(TypedDict):
     question: str
     intent: str
-    reply: str  # 'result' 대신 'reply' 사용
+    reply: str
     sources: List[Dict[str, Any]]
     tool_output: Dict[str, Any]
 
-# 도구(Tool) 함수 - LLM 에이전트가 사용
+
 @tool
 def tool_reset_password(payload: Dict[str, Any] = {}) -> Dict[str, Any]:
     """비밀번호 초기화 절차를 안내합니다."""
     return {
-        "ok": True, 
-        "message": "비밀번호 초기화 절차 안내", 
+        "ok": True,
+        "message": "비밀번호 초기화 절차 안내",
         "steps": ["SSO 포털 접속 > 비밀번호 재설정", "본인인증", "새 비밀번호 설정"]
     }
+
 
 @tool
 def tool_request_id(payload: Dict[str, Any] = {}) -> Dict[str, Any]:
     """ID 발급 신청 절차를 안내합니다."""
     return {
-        "ok": True, 
-        "message": "ID 발급 신청 절차 안내", 
+        "ok": True,
+        "message": "ID 발급 신청 절차 안내",
         "steps": ["HR 포털 접속 > '계정 신청' 양식 제출", "양식 승인 후 IT팀에서 계정 생성"]
     }
+
 
 @tool
 def tool_owner_lookup(payload: Dict[str, Any]) -> Dict[str, Any]:
     """화면이나 메뉴의 담당자 정보를 조회합니다. `screen` 인자가 필요합니다."""
     try:
         screen = payload.get("screen") or ""
-        # owner.csv 데이터 검색
         owner_data = load_owner_data()
         for item in owner_data:
             if screen in item.get("screen", ""):
@@ -288,13 +306,102 @@ def tool_owner_lookup(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "message": f"'{screen}' 담당자 정보를 찾지 못했습니다."}
     except Exception as e:
         return {"ok": False, "message": f"도구 실행 중 오류 발생: {str(e)}"}
+# =============================================================
+# 5. LangGraph 노드 정의
+# workflow/nodes.py (LangGraph 노드 정의)
+# =============================================================
+    # Prompt Engineering - 프롬프트 최적화 (Few-shot Prompting) [checklist: 1]
+# 노드(Node) 함수
+def node_classify(state: BotState) -> BotState:
+    llm = make_llm(model=AOAI_DEPLOY_GPT4O_MINI, temperature=0.1)
+    prompt_template = PromptTemplate.from_template("""
+    당신은 사용자 의도를 분류하는 AI입니다. 사용자의 질문을 가장 적합한 카테고리로 분류하세요.
+    - `greeting`: 사용자가 인사말("안녕", "안녕하세요" 등)을 건넬 때
+    - `direct_tool`: 사용자가 특정 시스템 작업(비밀번호 초기화, ID 발급, 담당자 조회)을 요청할 때
+    - `faq`: 자주 묻는 질문(FAQ)에 관련된 질문일 때
+    - `general_qa`: 위에 해당하지 않는 일반적인 질문일 때
 
-# RAG - 사전 정의된 데이터(문서)를 검색하여 AI의 논리력을 보강/ RAG 기반 지식 검색 기능 구현 [checklist: 8,9] 
+    질문에 대한 분류와 필요한 인자(JSON 형식)를 반환하세요.
+    JSON 형식: {{"intent": "분류", "arguments": {{"key": "value"}}}}
+    예시:
+    사용자 질문: "비밀번호 초기화 알려줘" -> {{"intent": "direct_tool", "arguments": {{"tool_name": "tool_reset_password"}}}}
+    사용자 질문: "인사시스템 담당자 누구야?" -> {{"intent": "direct_tool", "arguments": {{"tool_name": "tool_owner_lookup", "screen": "인사시스템-사용자관리"}}}}
+    사용자 질문: "점심시간이 언제야?" -> {{"intent": "faq", "arguments": {{}}}}
+    사용자 질문: "회사 복지제도 설명해줘" -> {{"intent": "general_qa", "arguments": {{}}}}
+    사용자 질문: "안녕" -> {{"intent": "greeting", "arguments": {{}}}}
+
+    사용자 질문: "{question}" -> 
+    """)
+    prompt = prompt_template.format(question=state["question"])
+    out = llm.invoke(prompt).content
+    
+    intent, args = "general_qa", {}
+    try:
+        data = json.loads(out.strip())
+        intent = data.get("intent", "general_qa")
+        args = data.get("arguments", {}) or {}
+    except json.JSONDecodeError:
+        logger.warning(f"[Classifier 오류] JSONDecodeError: {out}")
+    except Exception as e:
+        logger.error(f"[Classifier 오류] 알 수 없는 오류: {out} - {e}")
+    
+    return {**state, "intent": intent, "tool_output": args}
+
+def node_greeting(state: BotState) -> BotState:
+    return {**state, "reply": "네, 반갑습니다. 문의사항을 말씀해 주시면 제가 도와드릴게요.", "sources": []}
+
+def node_direct_tool(state: BotState) -> BotState:
+    tool_name = state.get("tool_output", {}).get("tool_name")
+    payload = state.get("tool_output", {}).get("arguments", {})
+    
+    if tool_name == "tool_reset_password":
+        res = tool_reset_password.invoke({})
+    elif tool_name == "tool_request_id":
+        res = tool_request_id.invoke({})
+    elif tool_name == "tool_owner_lookup":
+        # ✅ 전체 조회 예외 처리
+        query_text = state.get("question", "")
+        if "전체" in query_text or "모두" in query_text or "리스트" in query_text:
+            from platform_service.core import load_owner_data
+            owners = load_owner_data()
+            res = {
+                "ok": True,
+                "tool_name": "tool_owner_lookup",
+                "owners": owners
+            }
+        else:
+            res = tool_owner_lookup.invoke({"payload": payload})
+    else:
+        res = {"ok": False, "message": "알 수 없는 도구 호출"}
+    
+    # 도구 결과에 원래 호출된 도구 이름 추가
+    res["tool_name"] = tool_name
+    return {**state, "tool_output": res}
+    
+# 노드(Node) 함수 수정
+def node_faq(state: BotState) -> BotState:
+    # FAQ 데이터는 이미 RAG 파이프라인에 포함되어 있으므로,
+    # 이 노드에서는 FAQ와 관련된 질문인지 확인만 하고 바로 RAG로 라우팅
+    # (단, 아래 로직은 필요에 따라 삭제 또는 수정될 수 있습니다. 
+    #  현재는 RAG 노드에서 FAQ를 포함한 모든 문서를 처리하도록 되어 있습니다.)
+    
+    # 이 부분을 삭제하거나, 더 이상 FAQ를 별도로 처리하지 않도록 수정합니다.
+    # 기존 로직:
+    # faq_answer = find_similar_faq(state["question"])
+    # if faq_answer:
+    #     return {**state, "tool_output": {"ok": True, "answer": faq_answer.get("answer")}, "intent": "faq", "sources": [{"source": "faq_data.csv"}]}
+    # else:
+    #     return {**state, "intent": "general_qa"}
+
+    # 개선된 로직:
+    # FAQ 질문은 일반 질문과 마찬가지로 RAG 노드로 라우팅
+    return {**state, "intent": "general_qa"}
+    # RAG - 사전 정의된 데이터(문서)를 검색하여 AI의 논리력을 보강/ RAG 기반 지식 검색 기능 구현 [checklist: 8,9] 
 # Prompt Engineering - 프롬프트 최적화 (역할 부여 + Chain-of-Thought) [checklist: 1] 
 def node_rag(state: BotState) -> BotState:
     docs = retriever(k=4).get_relevant_documents(state["question"])
     
-    # ✅ 검색 결과가 전혀 없으면 → 일반 LLM 답변
+    # 검색 결과가 전혀 없으면 → 일반 LLM 답변
     if not docs:
         llm = make_llm(model=AOAI_DEPLOY_GPT4O)
         sys_prompt = "너는 사내 헬프데스크 상담원이다. 내부 문서에 없는 질문이라도 일반 지식을 활용해 한국어로 답해라."
@@ -304,7 +411,7 @@ def node_rag(state: BotState) -> BotState:
         ]).content
         return {**state, "reply": out, "sources": []}
 
-    # ✅ 검색 결과가 있으면 → RAG 기반 답변
+    # 검색 결과가 있으면 → RAG 기반 답변
     context = "\n\n".join([f"[{i+1}] {d.page_content[:1200]}" for i, d in enumerate(docs)])
     sources = [{"index": i+1, "source": d.metadata.get("source","unknown"), "page": d.metadata.get("page")} for i,d in enumerate(docs)]
     llm = make_llm(model=AOAI_DEPLOY_GPT4O)
@@ -332,7 +439,7 @@ def node_finalize(state: BotState) -> BotState:
         elif res.get("tool_name") == "tool_request_id":
             text = f"🆔 ID 발급 신청 절차 안내\n\n" + "\n".join(f"{i+1}. {s}" for i,s in enumerate(res.get("steps", []))) if res.get("ok") else f"❗{res.get('message','실패')}"  
         elif res.get("tool_name") == "tool_owner_lookup":
-            if "owners" in res:  # ✅ 전체 조회 케이스
+            if "owners" in res:  # 전체 조회 케이스
                 lines = ["📋 전체 담당자 목록:"]
                 for o in res["owners"]:
                     lines.append(
@@ -340,7 +447,7 @@ def node_finalize(state: BotState) -> BotState:
                         f"이메일: {o.get('email')} / 연락처: {o.get('phone')}"
                     )
                 text = "\n".join(lines)
-            else:  # ✅ 기존 단일 담당자 조회
+            else:  # 기존 단일 담당자 조회
                 text = (
                     f"👤 '{res.get('screen')}' 담당자\n"
                     f"- 이름: {res.get('owner', {}).get('owner')}\n"
@@ -354,9 +461,8 @@ def node_finalize(state: BotState) -> BotState:
         # 💡 수정: 반환 키를 'reply'로 통일
         return {**state, "reply": text}
     return state
-
 # =============================================================
-# 4. LangGraph Workflow 및 노드 정의
+# 4. workflow/graph.py (LangGraph 그래프 정의)
 # ==========================================================
 def load_owner_data() -> List[Dict[str, str]]:
     global _owner_data
@@ -445,96 +551,11 @@ def find_similar_faq(question: str) -> Optional[Dict[str, Any]]:
     # 점수 임계값(threshold)을 0.2로 설정
     return best_item if best_score > 0.2 else None
 
-# Prompt Engineering - 프롬프트 최적화 (Few-shot Prompting) [checklist: 1]
-# 노드(Node) 함수
-def node_classify(state: BotState) -> BotState:
-    llm = make_llm(model=AOAI_DEPLOY_GPT4O_MINI, temperature=0.1)
-    prompt_template = PromptTemplate.from_template("""
-    당신은 사용자 의도를 분류하는 AI입니다. 사용자의 질문을 가장 적합한 카테고리로 분류하세요.
-    - `greeting`: 사용자가 인사말("안녕", "안녕하세요" 등)을 건넬 때
-    - `direct_tool`: 사용자가 특정 시스템 작업(비밀번호 초기화, ID 발급, 담당자 조회)을 요청할 때
-    - `faq`: 자주 묻는 질문(FAQ)에 관련된 질문일 때
-    - `general_qa`: 위에 해당하지 않는 일반적인 질문일 때
-
-    질문에 대한 분류와 필요한 인자(JSON 형식)를 반환하세요.
-    JSON 형식: {{"intent": "분류", "arguments": {{"key": "value"}}}}
-    예시:
-    사용자 질문: "비밀번호 초기화 알려줘" -> {{"intent": "direct_tool", "arguments": {{"tool_name": "tool_reset_password"}}}}
-    사용자 질문: "인사시스템 담당자 누구야?" -> {{"intent": "direct_tool", "arguments": {{"tool_name": "tool_owner_lookup", "screen": "인사시스템-사용자관리"}}}}
-    사용자 질문: "점심시간이 언제야?" -> {{"intent": "faq", "arguments": {{}}}}
-    사용자 질문: "회사 복지제도 설명해줘" -> {{"intent": "general_qa", "arguments": {{}}}}
-    사용자 질문: "안녕" -> {{"intent": "greeting", "arguments": {{}}}}
-
-    사용자 질문: "{question}" -> 
-    """)
-    prompt = prompt_template.format(question=state["question"])
-    out = llm.invoke(prompt).content
-    
-    intent, args = "general_qa", {}
-    try:
-        data = json.loads(out.strip())
-        intent = data.get("intent", "general_qa")
-        args = data.get("arguments", {}) or {}
-    except json.JSONDecodeError:
-        logger.warning(f"[Classifier 오류] JSONDecodeError: {out}")
-    except Exception as e:
-        logger.error(f"[Classifier 오류] 알 수 없는 오류: {out} - {e}")
-    
-    return {**state, "intent": intent, "tool_output": args}
-
-def node_greeting(state: BotState) -> BotState:
-    return {**state, "reply": "네, 반갑습니다. 문의사항을 말씀해 주시면 제가 도와드릴게요.", "sources": []}
-
-def node_direct_tool(state: BotState) -> BotState:
-    tool_name = state.get("tool_output", {}).get("tool_name")
-    payload = state.get("tool_output", {}).get("arguments", {})
-    
-    if tool_name == "tool_reset_password":
-        res = tool_reset_password.invoke({})
-    elif tool_name == "tool_request_id":
-        res = tool_request_id.invoke({})
-    elif tool_name == "tool_owner_lookup":
-        # ✅ 전체 조회 예외 처리
-        query_text = state.get("question", "")
-        if "전체" in query_text or "모두" in query_text or "리스트" in query_text:
-            from platform_service.core import load_owner_data
-            owners = load_owner_data()
-            res = {
-                "ok": True,
-                "tool_name": "tool_owner_lookup",
-                "owners": owners
-            }
-        else:
-            res = tool_owner_lookup.invoke({"payload": payload})
-    else:
-        res = {"ok": False, "message": "알 수 없는 도구 호출"}
-    
-    # 도구 결과에 원래 호출된 도구 이름 추가
-    res["tool_name"] = tool_name
-    return {**state, "tool_output": res}
-    
-# 노드(Node) 함수 수정
-def node_faq(state: BotState) -> BotState:
-    # FAQ 데이터는 이미 RAG 파이프라인에 포함되어 있으므로,
-    # 이 노드에서는 FAQ와 관련된 질문인지 확인만 하고 바로 RAG로 라우팅
-    # (단, 아래 로직은 필요에 따라 삭제 또는 수정될 수 있습니다. 
-    #  현재는 RAG 노드에서 FAQ를 포함한 모든 문서를 처리하도록 되어 있습니다.)
-    
-    # 이 부분을 삭제하거나, 더 이상 FAQ를 별도로 처리하지 않도록 수정합니다.
-    # 기존 로직:
-    # faq_answer = find_similar_faq(state["question"])
-    # if faq_answer:
-    #     return {**state, "tool_output": {"ok": True, "answer": faq_answer.get("answer")}, "intent": "faq", "sources": [{"source": "faq_data.csv"}]}
-    # else:
-    #     return {**state, "intent": "general_qa"}
-
-    # 개선된 로직:
-    # FAQ 질문은 일반 질문과 마찬가지로 RAG 노드로 라우팅
-    return {**state, "intent": "general_qa"}
-
-_memory_checkpointer = MemorySaver()
-_graph = None
 # StateGraph 클래스를 사용해 멀티 에이전트 워크플로우를 정의함
+# =============================================================
+# 5. StateGraph 클래스를 사용해 멀티 에이전트 워크플로우를 정의
+# workflow/graph.py (LangGraph 그래프 정의)
+# =============================================================
 def build_graph():
     logger.info("build_graph")
     g = StateGraph(BotState)
@@ -578,9 +599,9 @@ def build_graph():
     g.add_edge("finalize", END)
     
     return g.compile(checkpointer=_memory_checkpointer)
-
 # =============================================================
-# 5. Pipeline Orchestration
+# 6. Pipeline Orchestration
+# workflow/pipeline.py (파이프라인 실행)
 # =============================================================
 # LangChain & LangGraph를 활용한 전체 파이프라인 구성
 _graph = None
@@ -749,3 +770,4 @@ def pipeline(question: str, session_id: str) -> Dict[str, Any]:
             "intent": "unsupported",
             "sources": []
         }
+

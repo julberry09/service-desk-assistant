@@ -410,3 +410,41 @@ git commit -m "fixed untracked files"
     ```bash
     python -m venv .venv
     ```
+
+
+---
+
+## 📡 API & UI 분리 구조 실행 가이드
+
+### 📦 프로젝트 구조
+- **UI (Streamlit)**: API 서버를 통해서만 동작하며, `pipeline`이나 `core.py`를 직접 호출하지 않습니다.
+- **Backend API (FastAPI)**: `/chat`, `/health`, `/sync` 엔드포인트를 제공하여 UI 요청을 처리합니다.
+
+### 📡 API 엔드포인트
+- `GET /health` → API 서버 상태 확인
+- `POST /chat` → 채팅 메시지 처리
+- `POST /sync` → 벡터 인덱스 재생성 (UI에서 "Sync Content" 버튼을 통해 호출됨)
+
+### 🚀 실행 순서
+1. **API 서버 실행**
+   ```bash
+   python -m platform_service.api --port 8001
+   ```
+
+2. **Streamlit UI 실행**
+   ```bash
+   python -m streamlit run platform_assistant/ui.py --server.port 8507
+   ```
+
+⚠️ UI는 API 서버와 완전히 분리되어 있으므로, API 서버가 반드시 먼저 실행되어야 합니다.
+
+### 📌 Sync Content 버튼
+UI 사이드바의 **Sync Content** 버튼은 더 이상 `build_or_load_vectorstore()`를 직접 호출하지 않습니다.  
+대신 API 서버의 `/sync` 엔드포인트를 호출하여 벡터 인덱스를 재생성합니다.
+
+
+### 🖼 최종 아키텍처 다이어그램
+
+아래 다이어그램은 DB(history 저장)와 API 분리 구조까지 적용된 최종 아키텍처를 보여줍니다.
+
+![Final Architecture](final_architecture.png)
