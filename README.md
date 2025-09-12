@@ -355,7 +355,7 @@ sequenceDiagram
 
 ```
 ---
-## 📐프로젝트 서비스 아키텍처 다이어그램
+## 프로젝트 서비스 아키텍처 다이어그램
 ```mermaid
 flowchart TB
   %% 사용자
