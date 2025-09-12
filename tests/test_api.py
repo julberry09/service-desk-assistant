@@ -277,3 +277,61 @@ def test_owner_lookup_vague_question(client):
         expected_keys=["reply", "intent"],
         additional_assertions=assert_vague_owner_response
     )
+# =============================================================
+# 5. API 전용 테스트
+# =============================================================
+
+def test_status_endpoint(client):
+    """/status 엔드포인트가 ok, azure_available 필드를 반환하는지 검증"""
+    r = client.get("/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert "ok" in data
+    assert "azure_available" in data
+
+def test_chat_and_history(client):
+    """/chat 이후 /history 조회 시 DB에 저장된 메시지가 바로 반환되는지 검증"""
+    session_id = "test-session"  # ✅ 고정 세션 ID 사용
+
+    # 먼저 대화 저장 (/chat)
+    payload = {"message": "테스트 메시지", "session_id": session_id}
+    r1 = client.post("/chat", json=payload)
+    assert r1.status_code == 200
+    data1 = r1.json()
+    assert "reply" in data1
+
+    # 곧바로 이력 조회 (/history)
+    r2 = client.get("/history", params={"session_id": session_id, "limit": 5})
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert data2["ok"] is True
+    # 저장된 메시지 중 방금 입력한 게 있는지 확인
+    assert any(m["message"] == "테스트 메시지" and m["role"] == "user" for m in data2["messages"])
+
+def test_sync_endpoint(client):
+    """/sync 엔드포인트가 Azure 설정 여부에 따라 적절한 응답을 주는지 검증"""
+    r = client.post("/sync")
+    assert r.status_code == 200
+    data = r.json()
+    if AZURE_AVAILABLE:
+        assert data["ok"] is True
+    else:
+        assert data["ok"] is False
+        assert "Azure 설정 없음" in data["message"]
+
+
+def test_upload_endpoint(client, tmp_path):
+    """/upload 엔드포인트가 파일 업로드를 정상 처리하는지 검증"""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("hello world", encoding="utf-8")
+
+    with open(test_file, "rb") as f:
+        r = client.post(
+            "/upload",
+            files={"files": ("test.txt", f, "text/plain")},
+        )
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is True
+    assert "test.txt" in data["saved"]

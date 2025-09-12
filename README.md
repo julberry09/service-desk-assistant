@@ -238,6 +238,8 @@ pytest
 
 # 테스트 수행 및 로그파일로 저장
 pytest > logs/results.txt
+
+pytest -v > logs/results_ok.txt
  
 
 ```
