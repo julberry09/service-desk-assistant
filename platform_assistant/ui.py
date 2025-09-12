@@ -137,9 +137,32 @@ def main():
             else:
                 st.markdown("🚨 API 서버: 오프라인")
             status_box.update(label="서버 연결 상태", state="complete", expanded=True)
+        st.divider()
+        
+        #  대화 기록 조회
+        st.header("📜 대화 기록")
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.get(
+                    f"{API_BASE_URL}/history",
+                    params={"session_id": st.session_state["thread_id"], "limit": 10},
+                )
+            if resp.status_code == 200 and resp.json().get("ok"):
+                msgs = resp.json().get("messages", [])
+                if not msgs:
+                    st.info("저장된 대화가 없습니다.")
+                else:
+                    for m in msgs:
+                        role = "🧑 사용자" if m["role"] == "user" else "🤖 어시스턴트"
+                        st.write(f"{role}: {m['message']}  \n🕒 {m['created_at']}")
+            else:
+                st.warning("대화 기록을 불러오지 못했습니다.")
+        except Exception as e:
+            st.error(f"조회 오류: {e}")
 
         st.markdown("---")
         st.caption("Service Desk Assistant © 2025")
+    
 
     # ---------------------------------------------------------
     # 채팅 인터페이스

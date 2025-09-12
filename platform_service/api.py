@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from platform_service import pipeline, build_or_load_vectorstore, AZURE_AVAILABLE, constants
+from platform_service.db.history import init_db, save_message, load_messages 
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(api: FastAPI):
     logger.info("Application starting up...")
     try:
+        init_db()  # ✅ DB 초기화
         # 서버 시작 시 기본 KB 문서를 로드하여 벡터스토어 생성
         if AZURE_AVAILABLE:
             build_or_load_vectorstore()
@@ -88,11 +90,18 @@ def health():
 @api.post("/chat", response_model=ChatOut)
 def chat(payload: ChatIn = Body(...)):
     out = pipeline(payload.message, payload.session_id)
+    save_message(payload.session_id, "user", payload.message)
+    save_message(payload.session_id, "assistant", out.get("reply", ""))
     return ChatOut(
         reply=out.get("reply", ""),
         intent=out.get("intent", ""),
         sources=out.get("sources", [])
     )
+
+@api.get("/history")
+def get_history(session_id: str, limit: int = 20):
+    msgs = load_messages(session_id, limit)
+    return {"ok": True, "messages": msgs}
 
 @api.post("/sync")
 def sync_index():
