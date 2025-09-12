@@ -562,6 +562,7 @@ def find_similar_faq(question: str) -> Optional[Dict[str, Any]]:
 # 5. StateGraph 클래스를 사용해 멀티 에이전트 워크플로우를 정의
 # workflow/graph.py (LangGraph 그래프 정의)
 # =============================================================
+_memory_checkpointer = MemorySaver()
 def build_graph():
     logger.info("build_graph")
     g = StateGraph(BotState)

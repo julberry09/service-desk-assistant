@@ -197,7 +197,7 @@ source .venv/Scripts/activate
 **- 터미널 1: FastAPI 백엔드 실행**
 ```bash
 # 서버 실행
-python -m platform_service.api --port 8001
+python -m platform_service.api --port 8002
 
 ```
 ```bash
@@ -248,7 +248,7 @@ pytest -v > logs/results_ok.txt
 ```
 상세 로그 확인:
 ```bash
-pytest -vv -s
+pytest -vv -s > logs/results_ok.txt
 ```
 
 `pytest`가 `tests` 폴더를 자동으로 찾아 모든 테스트를 실행하고, 전부 `PASSED`로 표시되면 성공입니다.
