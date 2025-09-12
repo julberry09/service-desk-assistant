@@ -1,27 +1,17 @@
-# Dockerfile.api
-FROM python:3.11-slim
+FROM python:3.12-slim
 
+WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-WORKDIR /app
+RUN pip install --no-cache-dir --upgrade pip
 
-# System deps (optional, extend as needed)
-RUN apt-get update && apt-get install -y --no-install-recommends \    build-essential \    && rm -rf /var/lib/apt/lists/*
-
-# RUN pip install . 를 실행하면 pyproject.toml의 [project].dependencies를 설치합니다.
-# --no-cache-dir 옵션은 그대로 유지하고, 테스트 의존성은 설치하지 않아 이미지 용량이 최적화됩니다.
-
-#COPY requirements.txt /app/
-#RUN pip install --no-cache-dir -r requirements.txt
-
-COPY pyproject.toml /app/
-RUN pip install --no-cache-dir .
-
-#COPY . /app/
-COPY ./src/helpdesk_bot /app/helpdesk_bot
+COPY pyproject.toml .
+COPY platform_service ./platform_service
+COPY kb_data ./kb_data
+RUN pip install --no-cache-dir -e . && pip install --no-cache-dir python-multipart
 
 EXPOSE 8000
-#CMD ["python", "app.py", "--api", "--host", "0.0.0.0", "--port", "8000"]
-#CMD ["python", "api.py", "--host", "0.0.0.0", "--port", "8000"]
-CMD ["python", "-m", "helpdesk_bot.api", "--host", "0.0.0.0", "--port", "8000"]
+ENV API_SERVER_HOST=0.0.0.0 API_PORT=8000
+
+CMD ["python", "-m", "platform_service.api", "--host", "0.0.0.0", "--port", "8000"]

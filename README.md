@@ -12,22 +12,61 @@
 
 ## 💡 주요 기능
 
--   **대화형 서비스**: Streamlit UI를 통해 사용자 친화적인 챗봇 대화 환경을 제공합니다.
--   **RAG (Retrieval-Augmented Generation)**: `./kb_data` 폴더의 사내 매뉴얼이나 문서를 기반으로 정확하고 관련성 높은 답변을 생성합니다.
--   **LangGraph 기반 인텐트 라우팅**: 복잡한 사용자 의도를 분석하고, 일반 질의응답과 특정 기능 실행(툴 사용)을 유연하게 처리합니다.
--   **미리 정의된 기능 (Tools)**:
-    -   ID 발급 신청 안내
-    -   비밀번호 초기화 절차 안내
-    -   업무/화면별 담당자 정보 조회
+- **대화형 헬프데스크 서비스**  
+  - Streamlit 기반 UI(`platform_assistant/ui.py`)를 통해 직관적이고 사용자 친화적인 대화 환경을 제공합니다.  
+  - 세션 관리와 대화 기록 조회 기능을 포함하여, 사용자와의 상호작용 히스토리를 체계적으로 관리할 수 있습니다.  
+
+- **RAG (Retrieval-Augmented Generation) 기반 응답 생성**  
+  - `./kb_data` 디렉터리에 저장된 사내 매뉴얼, 정책 문서, 업로드 자료를 벡터 스토어로 인덱싱하여 활용합니다.  
+  - 이를 통해 단순 질의응답을 넘어, **정확하고 문맥에 맞는 답변**을 제공합니다.  
+
+- **LangGraph 기반 인텐트 분류 및 라우팅**  
+  - 사용자의 발화 의도를 분류하여 적절한 워크플로우 노드로 라우팅합니다.  
+  - 일반 FAQ, 문서 검색, 툴 실행 요청 등을 유연하게 전환할 수 있으며, 멀티 에이전트 확장도 고려된 구조입니다.  
+
+- **업무 자동화 툴(Predefined Tools) 제공**  
+  - 사내 헬프데스크에서 반복적으로 발생하는 요청을 자동화된 절차로 제공합니다.  
+    - **ID 발급 신청 안내**  
+    - **비밀번호 초기화 절차 안내**  
+    - **업무/화면별 담당자 정보 조회**  
+  - 향후 신규 툴을 손쉽게 추가할 수 있도록 API 및 워크플로우와 분리된 구조로 설계되었습니다.
+
 
 ---
 
 ## 📄 프로젝트 구조
 
-전문적인 개발 및 유지보수를 위해 소스코드(`src`)를 `platform_assistant`와 `platform_service`로 명확히 분리하고, Docker 설정(`docker`), 테스트(`tests`)를 포함한 구조를 따릅니다.
+전문적인 개발 및 유지보수를 위해 소스코드(`src`)는 **업무 로직/서버(`platform_service`)**와  
+**사용자 인터페이스(`platform_assistant`)**로 명확히 분리되어 있습니다.
+
+- **platform_service**
+  - `api.py` : FastAPI 기반 API 서버
+  - `core.py` : RAG 파이프라인 및 워크플로우 정의
+  - `db/` : SQLite 기반 DB 모듈 (`history.py` 등)
+  - `constants.py`, `logging_config.py` : 공통 유틸/설정
+- **platform_assistant**
+  - `ui.py` : Streamlit 기반 UI, API 호출 전용 클라이언트 역할
+
+추가적으로:
+- **docker** : `Dockerfile.api`, `Dockerfile.ui`, `docker-compose.yml` 등을 포함한 컨테이너 실행/배포 설정
+- **tests** : `pytest` 기반 자동화 검증을 위한 테스트 스위트
 
 ```
 service-desk-assistant/
+├── platform_assistant/       # 🌞 챗봇 UI 
+│   └── ui.py                 # Streamlit 실행 파일
+├── platform_service/         # ⚙️ API 서버 & 워크플로우
+│   ├── __init__.py
+│   ├── api.py                # FastAPI 서버
+│   ├── core.py               # AG 파이프라인 및 워크플로우 정의
+│   ├── constants.py          # 공통 상수/경로 (.env 반영)
+│   ├── logging_config.py     # 로깅 설정
+│   └── db/
+│       ├── __init__.py       # DB 패키지 초기화 모듈 (공통 DB_PATH 정의 및 init_all 함수 제공 가능)
+│       └── history.py        # DB 초기화/저장/조회
+├── tests/                    # 🧪 테스트 코드
+│   ├── __init__.py
+│   └── test_api.py           # API + workflow 테스트
 ├── README.md                 # 📄 프로젝트 설명서
 ├── pyproject.toml            # 📦 의존성 및 메타데이터
 ├── requirements.txt          # 📦 pip 설치용 의존성 리스트
@@ -35,30 +74,12 @@ service-desk-assistant/
 ├── .env                      # 🤫 환경 변수
 ├── .gitignore
 ├── .dockerignore
-│
-├── platform_assistant/       # 🤖 챗봇 UI (Streamlit 진입점)
-│   └── ui.py                 # Streamlit 실행 파일
-│
-├── platform_service/         # ⚙️ API 서버 & 비즈니스 로직
-│   ├── __init__.py
-│   ├── api.py                # FastAPI 서버
-│   ├── core.py               # RAG, LangGraph 핵심 로직
-│   └── constants.py          # 경로/환경 변수 상수
-│
-├── tests/                    # 🧪 테스트 코드
-│   ├── __init__.py
-│   └── test_api.py
-│
 ├── docker/                   # 🐳 Dockerfile 관리
 │   ├── Dockerfile.api
 │   └── Dockerfile.assistant
-│
-├── .streamlit/               # ⚙️ Streamlit 전용 설정
-│   └── config.toml
-│
 ├── kb_default/               # 📚 기본 지식 (Git 관리)
 │   └── faq_data.csv
-├── kb_data/                  # 🗂️ 동적/대용량 지식 (Git 무시)
+├── kb_data/                  # 🗂️ 동적/대용량 지식 
 ├── index/                    # 🗂️ FAISS 벡터 인덱스 저장소
 └── logs/                     # 🪵 로그 파일
 
@@ -172,12 +193,7 @@ uvicorn platform_service.api:api --port 8001 --reload
 **- 터미널 2: Streamlit UI 실행**
 ```bash
 # 프로젝트 최상위 폴더에서 실행 (권장)
-python -m streamlit run platform_assistant/ui.py --server.port 8507
-```
-```bash
-# 또는, ui.py가 있는 폴더로 이동하여 실행
-cd platform_assistant/
-streamlit run ui.py --server.port 8507
+streamlit run platform_assistant/ui.py --server.port 8507
 ```
 
 #### 📌 백엔드 & UI를 같은 터미널에서 실행하기 (Jupyter Notebook 버튼실행 불가할때)
@@ -201,34 +217,6 @@ API 서버가 백그라운드에서 실행 중이므로, 같은 터미널에서 
 Jupyter Notebook 환경에서는 별도의 가상 환경(venv)을 만들 필요가 없습니다. 
 Notebook 자체가 커널을 통해 패키지 종속성을 관리하므로, 바로 아래 명령어를 실행하여 불필요한 설정 과정을 생략하고 개발 효율을 높일 수 있습니다.
 
-#### 📌 Streamlit 실행 가이드
-
-프로젝트 구조 변경으로 인해 실행 명령어가 달라질 수 있습니다.  
-**실행 위치와 방법**에 따라 아래 차이가 있습니다:
-
-| 방식 | 명령어 | 특징 |
-|------|--------|------|
-| **직접 실행** | `streamlit run platform_assistant/ui.py` | 현재 디렉토리를 기준으로 파일을 찾음 → `platform_assistant` 폴더에서 실행 필요 |
-| **모듈 실행 (권장)** | `python -m streamlit run platform_assistant/ui.py` | Python 모듈 시스템을 활용 → 프로젝트 루트에서 실행 가능, 더 안정적 |
-
-👉 권장 방법: **`python -m`** 방식으로 실행하면 디렉토리 이동 없이 항상 안정적으로 실행됩니다.
-
-실행 후 웹 브라우저에서 [http://localhost:8507](http://localhost:8507) 접속 시 챗봇 UI를 사용할 수 있습니다.
-
-#### 📌 platform_service를 찾을 수 없는 이유 
-platform_service 모듈을 찾을 수 없는 문제는 일반적으로 패키지 설치 캐시가 꼬였을 때 발생합니다. 
-특히 이전에 프로젝트를 helpdesk-bot이라는 이름으로 설치했던 잔여 캐시가 남아있는 경우, 
-새롭게 설치한 service-desk-assistant 패키지와 충돌이 일어날 수 있습니다.
-기존에 설치된 캐시를 완전히 삭제하고, 프로젝트를 다시 설치해야 합니다.
-아래 명령어를 순서대로 실행하여 문제를 해결할 수 있습니다.
-
-```bash
-# 기존 패키지 언인스톨
-pip uninstall service-desk-assistant -y
-# 재설치
-pip install -e .
-```
-
 ### 5단계: 단위 테스트 실행
 프로젝트 최상위 폴더에서 아래 명령어를 실행하여 코드의 안정성을 검증합니다.
 
@@ -245,6 +233,11 @@ pytest -v > logs/results_ok.txt
 ```
 `pytest`가 `tests` 폴더를 자동으로 찾아 모든 테스트를 실행하고, 전부 `PASSED`로 표시되면 성공입니다.
 
+테스트 커버리지:
+- `/status` 검증
+- `/chat` → `/history` 연계
+- `/sync` 응답
+- `/upload` 동작
 
 ### 6단계: LangGraph Studio 활용 (선택 사항)
 LangGraph Studio를 사용하면 챗봇의 복잡한 대화 흐름을 시각적으로 모니터링하고 디버깅할 수 있습니다. 이를 위해 추가 설정이 필요합니다.
@@ -277,55 +270,94 @@ langgraph-studio --host 0.0.0.0 --port 8100
 
 
 ---
+## 🐳 Docker
 
-## 🐳 Docker 실행 가이드
-`docker-compose`를 사용하여 API와 UI 컨테이너를 한 번에 실행할 수 있습니다.
-
-### Dockerfile 예시
-**`docker/Dockerfile.api`**
+### Dockerfile.api
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
+
 WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# pyproject.toml을 사용한 의존성 설치
-COPY pyproject.toml /app/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --upgrade pip
 
-# 소스코드 복사
-COPY src/helpdesk_bot /app/helpdesk_bot
+COPY pyproject.toml .
+COPY platform_service ./platform_service
+COPY kb_data ./kb_data
+RUN pip install --no-cache-dir -e . && pip install --no-cache-dir python-multipart
 
-ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
-CMD ["python", "-m", "helpdesk_bot.api", "--host", "0.0.0.0", "--port", "8000"]
+ENV API_SERVER_HOST=0.0.0.0 API_PORT=8000
+
+CMD ["python", "-m", "platform_service.api", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-**`docker/Dockerfile.ui`**
+### Dockerfile.ui
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
+
 WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# pyproject.toml을 사용한 의존성 설치
-COPY pyproject.toml /app/
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --upgrade pip
 
-# 소스코드 복사
-COPY src/helpdesk_bot /app/helpdesk_bot
+COPY pyproject.toml .
+COPY platform_service ./platform_service
+RUN pip install --no-cache-dir -e .
 
-ENV PYTHONUNBUFFERED=1
-EXPOSE 8501
-CMD ["streamlit", "run", "helpdesk_bot/ui.py", "--server.address=0.0.0.0", "--server.port=8501"]
+EXPOSE 8507
+CMD ["streamlit", "run", "platform_service/ui.py", "--server.port=8507", "--server.address=0.0.0.0"]
 ```
 
-### docker-compose 실행
-`.env` 파일이 올바르게 설정되었는지 확인 후, 아래 명령어를 실행하세요.
+### docker-compose.yml
+```yaml
+version: "3.9"
 
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: sda-api
+    environment:
+      - API_SERVER_HOST=0.0.0.0
+      - API_PORT=8000
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./kb_data:/app/kb_data
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: sda-ui
+    environment:
+      - API_CLIENT_HOST=api
+      - API_PORT=8000
+    ports:
+      - "8507:8507"
+    depends_on:
+      - api
+    restart: unless-stopped
+```
+
+### 실행
 ```bash
-docker compose up --build
+docker compose up --build -d
+# UI: http://localhost:8507
+# API: http://localhost:8001/health
 ```
 
--   **UI 접속**: [http://localhost:8501](http://localhost:8501)
--   **API 문서 (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
--   `./kb`, `./index`, `./logs` 폴더는 **볼륨**으로 마운트되어 컨테이너 재시작 시에도 데이터가 유지됩니다.
+---
+
+## 🧭 UX 정책
+
+- **본문(main)**: 항상 새 대화창처럼 시작 (session_state.chat 초기화)
+- **사이드바**: DB 기반 `/history` 조회로 이력 확인
 
 
 ---
@@ -362,60 +394,6 @@ ruff check . --fix
 
 ---
 
-## 👩‍💻 소스 다운로드
-
-### 소스 다운로드
-```bash
-git clone https://github.com/julberry09/service-desk-assistant.git
-```
-### 파일 추가 / 수정
-```bash
-git config --global user.email "jeongsunkim09@gmail.com"
-git config --global user.name "sunny"
-git pull
-git add .
-git commit -m "Commit Message"
-git pull
-git push -u origin main
-git push -u origin main --force
-```
-## Gitignore 캐쉬 삭제
-```bash
-git rm -r --cached .
-git add .
-git commit -m "fixed untracked files"
-```
----
-
-## 🐛 문제 해결 (Troubleshooting)
-
-로컬 환경에서 개발 시 발생할 수 있는 일반적인 오류와 해결 방법입니다.
-
-### 1. `Error: address already in use`
--   **원인**: 이전에 실행한 API 서버가 아직 종료되지 않고 해당 포트를 계속 사용하고 있는 경우입니다.
--   **해결 방법**: 아래 명령어로 기존에 실행 중인 API 서버 프로세스를 종료한 후 다시 실행합니다.
-    ```bash
-    pkill -f helpdesk_bot.api
-    ```
-
-### 2. `ModuleNotFoundError` 또는 `File does not exist`
--   **원인**: 명령어를 프로젝트 최상위 폴더(예: `helpdesk-bot-project`)가 아닌 다른 위치에서 실행했거나, 가상환경에 프로젝트가 제대로 설치되지 않았기 때문입니다.
--   **해결 방법**:
-    1.  `cd` 명령어로 `pyproject.toml` 파일이 있는 **프로젝트 최상위 폴더로 이동**합니다.
-    2.  가상환경을 활성화합니다: `source .venv/bin/activate`
-    3.  프로젝트를 editable 모드로 설치합니다: `pip install -e .`
-    4.  다시 실행 명령어를 입력합니다.
-
-### 3. `source: .venv/bin/activate: No such file or directory`
--   **원인**: 프로젝트 가상환경(`.venv` 폴더)이 아직 생성되지 않았습니다.
--   **해결 방법**: 프로젝트 최상위 폴더에서 아래 명령어로 가상환경을 먼저 생성한 후, 다시 활성화 명령어를 실행합니다.
-    ```bash
-    python -m venv .venv
-    ```
-
-
----
-
 ## 📡 API & UI 분리 구조 실행 가이드
 
 ### 📦 프로젝트 구조
@@ -444,9 +422,54 @@ git commit -m "fixed untracked files"
 UI 사이드바의 **Sync Content** 버튼은 더 이상 `build_or_load_vectorstore()`를 직접 호출하지 않습니다.  
 대신 API 서버의 `/sync` 엔드포인트를 호출하여 벡터 인덱스를 재생성합니다.
 
+---
+## 🐛 문제 해결 (Troubleshooting)
 
-### 🖼 최종 아키텍처 다이어그램
+로컬 환경에서 개발 시 발생할 수 있는 일반적인 오류와 해결 방법입니다.
 
-아래 다이어그램은 DB(history 저장)와 API 분리 구조까지 적용된 최종 아키텍처를 보여줍니다.
+### 1. `Error: address already in use`
+-   **원인**: 이전에 실행한 API 서버가 아직 종료되지 않고 해당 포트를 계속 사용하고 있는 경우입니다.
+-   **해결 방법**: 아래 명령어로 기존에 실행 중인 API 서버 프로세스를 종료한 후 다시 실행합니다.
+    ```bash
+    pkill -f helpdesk_bot.api
+    ```
 
-![Final Architecture](final_architecture.png)
+### 2. `ModuleNotFoundError` 또는 `File does not exist`
+-   **원인**: 명령어를 프로젝트 최상위 폴더(예: `helpdesk-bot-project`)가 아닌 다른 위치에서 실행했거나, 가상환경에 프로젝트가 제대로 설치되지 않았기 때문입니다.
+-   **해결 방법**:
+    1.  `cd` 명령어로 `pyproject.toml` 파일이 있는 **프로젝트 최상위 폴더로 이동**합니다.
+    2.  가상환경을 활성화합니다: `source .venv/bin/activate`
+    3.  프로젝트를 editable 모드로 설치합니다: `pip install -e .`
+    4.  다시 실행 명령어를 입력합니다.
+
+### 3. `source: .venv/bin/activate: No such file or directory`
+-   **원인**: 프로젝트 가상환경(`.venv` 폴더)이 아직 생성되지 않았습니다.
+-   **해결 방법**: 프로젝트 최상위 폴더에서 아래 명령어로 가상환경을 먼저 생성한 후, 다시 활성화 명령어를 실행합니다.
+    ```bash
+    python -m venv .venv
+    ```
+
+---
+## 👩‍💻 프로그램 다운로드
+
+### 프로그램
+```bash
+git clone https://github.com/julberry09/service-desk-assistant.git
+```
+### 파일 추가 / 수정
+```bash
+git config --global user.email "jeongsunkim09@gmail.com"
+git config --global user.name "sunny"
+git pull
+git add .
+git commit -m "Commit Message"
+git pull
+git push -u origin main
+git push -u origin main --force
+```
+## Gitignore 캐쉬 삭제
+```bash
+git rm -r --cached .
+git add .
+git commit -m "fixed untracked files"
+```
