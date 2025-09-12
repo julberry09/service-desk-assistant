@@ -273,51 +273,48 @@ langgraph-studio --host 0.0.0.0 --port 8100
 ## 사용자 플로우 다이어그램 (Swimlane Flow)
 ```mermaid
 flowchart LR
-  %% Lanes
   subgraph Client["사용자 & Streamlit UI (ui.py)"]
-    U[사용자 입력] --> S[세션 ID 생성 & 인사말 표시]
-    S --> C1[POST /chat (질문 + 세션ID)]
+    U[사용자 입력] --> S[세션 ID 생성 및 인사말 표시]
+    S --> C1["POST /chat (질문 + 세션ID)"]
   end
 
   subgraph API["백엔드 API (api.py)"]
-    C1 --> A1[요청 검증 & 전처리]
-    A1 --> A2[core.pipeline 호출 (LangGraph 실행)]
-    A2 --> A3[(history.py) 요청 로그 기록]
+    C1 --> A1[요청 검증 및 전처리]
+    A1 --> A2[core.pipeline 호출]
+    A2 --> A3[history.py 저장]
   end
 
   subgraph Orchestration["LangGraph 파이프라인 (core.py)"]
-    A2 --> L1[node_classify: 의도 분류(greeting | direct_tool | faq | general_qa)]
-    L1 -->|greeting| Lg[인사말 생성 후 종료]
-    L1 -->|direct_tool| Lt[node_direct_tool: 비밀번호 초기화/ID 발급 등]
-    L1 -->|faq/general_qa| Lr[node_rag]
-    Lr --> R1[FAISS에서 관련 문서 검색]
-    R1 --> R2[LLM에 컨텍스트 + 질문 전달]
-    R2 --> R3[응답 초안 생성 & 포맷팅]
+    A2 --> L1[node_classify - 의도 분류]
+    L1 -->|greeting| Lg[인사말 응답]
+    L1 -->|direct_tool| Lt[node_direct_tool 실행]
+    L1 -->|faq/general_qa| Lr[node_rag 실행]
+    Lr --> R1[FAISS 검색]
+    R1 --> R2[LLM 답변 생성]
   end
 
-  subgraph Stores["저장소"]
-    V[(FAISS Vector Store)]
-    D[(SQLite DB: 대화 history)]
+  subgraph Data["저장소 및 외부"]
+    V[(FAISS Index)]
+    D[(SQLite DB)]
   end
 
-  %% Data links
   R1 --- V
   A3 --- D
 
-  %% Return to API and Client
   Lg --> O1[최종 응답]
   Lt --> O1
-  R3 --> O1
+  R2 --> O1
 
   subgraph API
-    O1 --> A4[후처리/참고자료 첨부]
-    A4 --> A5[JSON 응답 반환]
+    O1 --> A4[JSON 응답 생성]
+    A4 --> A5[UI에 반환]
   end
 
   subgraph Client
-    A5 --> UI1[채팅 UI 업데이트 & 참고자료 토글 표시]
-    UI1 -->|다음 입력| U
+    A5 --> UI1[채팅 UI 업데이트]
+    UI1 --> U
   end
+
 ```
 
 ---
@@ -358,44 +355,28 @@ sequenceDiagram
 ## 프로젝트 서비스 아키텍처 다이어그램
 ```mermaid
 flowchart TB
-  %% 사용자
   User([사용자]) --> UI
 
   %% UI Layer
   subgraph Frontend["프론트엔드 (UI Layer)"]
-    UI[Streamlit UI<br>(platform_assistant/ui.py)]
-    note right of UI
-      주요 기능:
-      - 채팅 입력/출력
-      - 파일 업로드
-      - Sync Content
-      - 대화 기록 조회
-    end note
+    UI[Streamlit UI (platform_assistant/ui.py)]
   end
 
   %% API Layer
   subgraph Backend["백엔드 (API Server Layer)"]
-    API[FastAPI API 서버<br>(platform_service/api.py)]
-    MW[AuditMiddleware<br>요청/응답 로깅]
-    HIST[history.py<br>대화 기록 관리]
+    API[FastAPI API 서버 (platform_service/api.py)]
+    MW[AuditMiddleware 요청/응답 로깅]
+    HIST[history.py 대화 기록 관리]
     API --> MW
     API --> HIST
-    note right of API
-      엔드포인트:
-      - /chat
-      - /history
-      - /sync
-      - /upload
-    end note
   end
 
   %% Core Logic
   subgraph Core["AI 워크플로우 (Core Logic)"]
-    CORE[LangGraph 파이프라인<br>(platform_service/core.py)]
-    CLS[node_classify<br>의도 분류]
-    RAG[node_rag<br>문서 검색 & 답변 생성]
-    TOOL[node_direct_tool<br>자동화 도구 실행]
-
+    CORE[LangGraph 파이프라인 (platform_service/core.py)]
+    CLS[node_classify - 의도 분류]
+    RAG[node_rag - RAG 검색]
+    TOOL[node_direct_tool - 자동화 도구]
     CORE --> CLS
     CORE --> RAG
     CORE --> TOOL
@@ -403,11 +384,11 @@ flowchart TB
 
   %% Data Layer
   subgraph Data["데이터 및 외부 서비스"]
-    KB[(KB Data<br>사용자 업로드 문서)]
-    KBDEF[(KB Default<br>기본 FAQ/지식)]
+    KB[(KB Data - 업로드 문서)]
+    KBDEF[(KB Default - 기본 FAQ)]
     VDB[(FAISS Index)]
-    DB[(SQLite DB<br>history.db)]
-    AOAI[(Azure OpenAI<br>LLM & Embeddings)]
+    DB[(SQLite DB - history.db)]
+    AOAI[(Azure OpenAI - LLM & Embeddings)]
   end
 
   %% 연결 관계
@@ -422,10 +403,10 @@ flowchart TB
   CORE --> KBDEF
   CORE --> VDB
 
-  %% Docker Layer
+  %% Deploy
   subgraph Deploy["패키징 & 배포"]
-    DK1[Dockerfile.assistant<br>(Frontend)]
-    DK2[Dockerfile.api<br>(Backend)]
+    DK1[Dockerfile.assistant - Frontend]
+    DK2[Dockerfile.api - Backend]
     DC[docker-compose.yml]
     DK1 --> DC
     DK2 --> DC
@@ -433,6 +414,7 @@ flowchart TB
 
   API -.배포.-> DK2
   UI -.배포.-> DK1
+
 
 ```
 이 다이어그램은 다음을 시각화합니다:
