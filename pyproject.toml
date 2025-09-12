@@ -30,7 +30,8 @@ dependencies = [
     # Loaders
     "pypdf>=4.2.0",
     "docx2txt>=0.8",
-
+    "python-multipart",
+    
     # Version Pinning
     "numpy>=1.26.4,<2.0.0",
 ]

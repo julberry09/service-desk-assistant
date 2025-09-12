@@ -3,11 +3,12 @@
 import os
 import uvicorn
 import time as _time
-from typing import List, Dict, Any
 import contextlib
 import logging
+from pathlib import Path
+from typing import List
 
-from fastapi import FastAPI, Body, Request
+from fastapi import FastAPI, Body, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -29,9 +30,9 @@ async def lifespan(api: FastAPI):
         # 서버 시작 시 기본 KB 문서를 로드하여 벡터스토어 생성
         if AZURE_AVAILABLE:
             build_or_load_vectorstore()
-            logger.info("기본 KB 문서를 벡터스토어에 로드 완료 (kb_default, kb_data)")
+            logger.info("기본 KB 문서를 벡터스토어에 로드 완료")
         else:
-            logger.warning("Azure OpenAI 설정이 없어 기본 KB 로드는 건너뜁니다.")
+            logger.warning("Azure OpenAI 설정이 없어 기본 KB 로드는 생략")
     except Exception as e:
         logger.error(f"Failed to initialize vectorstore: {e}")
     yield
@@ -39,7 +40,7 @@ async def lifespan(api: FastAPI):
 
 api = FastAPI(
     title="Service Desk Assistant API",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan
 )
 
@@ -75,22 +76,17 @@ class ChatIn(BaseModel):
     message: str
     session_id: str
 
-
 class ChatOut(BaseModel):
     reply: str
     intent: str
     sources: list[dict] = Field(default_factory=list)
 
-
 @api.get("/health")
 def health():
-    """헬스체크 API"""
     return {"ok": True}
-
 
 @api.post("/chat", response_model=ChatOut)
 def chat(payload: ChatIn = Body(...)):
-    """RAG 파이프라인을 호출하는 채팅 API"""
     out = pipeline(payload.message, payload.session_id)
     return ChatOut(
         reply=out.get("reply", ""),
@@ -98,6 +94,34 @@ def chat(payload: ChatIn = Body(...)):
         sources=out.get("sources", [])
     )
 
+@api.post("/sync")
+def sync_index():
+    if not AZURE_AVAILABLE:
+        return {"ok": False, "message": "Azure 설정 없음"}
+    try:
+        build_or_load_vectorstore()
+        return {"ok": True, "message": "인덱스 재생성 완료"}
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
+
+@api.get("/status")
+def status():
+    return {
+        "ok": True,
+        "azure_available": AZURE_AVAILABLE,
+    }
+
+@api.post("/upload")
+async def upload_files(files: List[UploadFile] = File(...)):
+    """업로드된 문서를 kb_data 디렉토리에 저장"""
+    saved = []
+    constants.KB_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    for f in files:
+        path = constants.KB_DATA_DIR / f.filename
+        with open(path, "wb") as w:
+            w.write(await f.read())
+        saved.append(f.filename)
+    return {"ok": True, "saved": saved}
 
 # =============================================================
 # 4. 실행 엔트리포인트 - main.py 
