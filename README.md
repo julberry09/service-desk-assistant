@@ -355,65 +355,49 @@ sequenceDiagram
 ## 프로젝트 서비스 아키텍처 다이어그램
 ```mermaid
 flowchart TB
-  User([사용자]) --> UI
+  user["사용자"]
+  ui["Streamlit UI - platform_assistant/ui.py"]
+  api["FastAPI API 서버 - platform_service/api.py"]
+  core["LangGraph 파이프라인 - platform_service/core.py"]
 
-  %% UI Layer
-  subgraph Frontend["프론트엔드 (UI Layer)"]
-    UI[Streamlit UI (platform_assistant/ui.py)]
+  classify["node_classify - 의도 분류"]
+  rag["node_rag - RAG 검색"]
+  tool["node_direct_tool - 자동화 도구"]
+
+  kb["KB Data (업로드 문서)"]
+  kbdef["KB Default (기본 FAQ)"]
+  faiss["FAISS Index"]
+  db["SQLite DB (history.db)"]
+  aoai["Azure OpenAI (LLM & Embeddings)"]
+
+  %% 메인 플로우
+  user --> ui --> api --> core
+  core --> classify
+  core --> rag
+  core --> tool
+
+  %% RAG / 도구 / LLM
+  rag --> faiss
+  rag --> aoai
+  classify --> aoai
+  tool --> aoai
+
+  %% 저장소 연결
+  api --> db
+  core --> kb
+  core --> kbdef
+  core --> faiss
+
+  %% 배포
+  subgraph Deploy["패키징 및 배포"]
+    dk1["Dockerfile.assistant (Frontend)"]
+    dk2["Dockerfile.api (Backend)"]
+    dc["docker-compose.yml"]
+    dk1 --> dc
+    dk2 --> dc
   end
-
-  %% API Layer
-  subgraph Backend["백엔드 (API Server Layer)"]
-    API[FastAPI API 서버 (platform_service/api.py)]
-    MW[AuditMiddleware 요청/응답 로깅]
-    HIST[history.py 대화 기록 관리]
-    API --> MW
-    API --> HIST
-  end
-
-  %% Core Logic
-  subgraph Core["AI 워크플로우 (Core Logic)"]
-    CORE[LangGraph 파이프라인 (platform_service/core.py)]
-    CLS[node_classify - 의도 분류]
-    RAG[node_rag - RAG 검색]
-    TOOL[node_direct_tool - 자동화 도구]
-    CORE --> CLS
-    CORE --> RAG
-    CORE --> TOOL
-  end
-
-  %% Data Layer
-  subgraph Data["데이터 및 외부 서비스"]
-    KB[(KB Data - 업로드 문서)]
-    KBDEF[(KB Default - 기본 FAQ)]
-    VDB[(FAISS Index)]
-    DB[(SQLite DB - history.db)]
-    AOAI[(Azure OpenAI - LLM & Embeddings)]
-  end
-
-  %% 연결 관계
-  UI -->|httpx 요청| API
-  API --> CORE
-  RAG --> VDB
-  RAG --> AOAI
-  CLS --> AOAI
-  TOOL --> AOAI
-  HIST --> DB
-  CORE --> KB
-  CORE --> KBDEF
-  CORE --> VDB
-
-  %% Deploy
-  subgraph Deploy["패키징 & 배포"]
-    DK1[Dockerfile.assistant - Frontend]
-    DK2[Dockerfile.api - Backend]
-    DC[docker-compose.yml]
-    DK1 --> DC
-    DK2 --> DC
-  end
-
-  API -.배포.-> DK2
-  UI -.배포.-> DK1
+  ui -.배포.-> dk1
+  api -.배포.-> dk2
 
 
 ```
