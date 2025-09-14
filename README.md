@@ -175,10 +175,7 @@ pip install python-multipart
 ```bash
 [project]
 dependencies = [
-    "fastapi",
-    "uvicorn",
-    "httpx",
-    "python-dotenv",
+
     "python-multipart",   # ✅ 이 줄 추가
 ]
 ```
@@ -197,7 +194,7 @@ source .venv/Scripts/activate
 **- 터미널 1: FastAPI 백엔드 실행**
 ```bash
 # 서버 실행
-python -m platform_service.api --port 8002
+python -m platform_service.api --port 8001
 
 ```
 ```bash
@@ -229,6 +226,7 @@ API 서버가 백그라운드에서 실행 중이므로, 같은 터미널에서 
 이제 웹 브라우저에서 https://ai*lab.s***/streamlit/지정포트/ 주소로 접속하면 챗봇 UI를 사용할 수 있습니다.
 
 **3. 📝 Jupyter Notebook 사용자를 위한 팁**
+
 Jupyter Notebook 환경에서는 별도의 가상 환경(venv)을 만들 필요가 없습니다. 
 Notebook 자체가 커널을 통해 패키지 종속성을 관리하므로, 바로 아래 명령어를 실행하여 불필요한 설정 과정을 생략하고 개발 효율을 높일 수 있습니다.
 
@@ -242,18 +240,13 @@ pytest
 # 테스트 수행 및 로그파일로 저장
 pytest > logs/results.txt
 
-pytest -v > logs/results_ok.txt
- 
-
-```
-상세 로그 확인:
-```bash
+# 테스트 수행 및 로그파일로 저장(상세)
 pytest -vv -s > logs/results_ok.txt
-```
-
+ ```
 `pytest`가 `tests` 폴더를 자동으로 찾아 모든 테스트를 실행하고, 전부 `PASSED`로 표시되면 성공입니다.
 
-테스트 커버리지:
+#### 📌 테스트 커버리지
+
 - `/status` 검증
 - `/chat` → `/history` 연계
 - `/sync` 응답
@@ -421,13 +414,12 @@ flowchart TB
 
 
 ```
+
 이 다이어그램은 다음을 시각화합니다:
-
 사용자 ↔ UI ↔ API ↔ Core ↔ Data ↔ Azure OpenAI 전체 흐름
-
 각 계층(Frontend, Backend, Core, Data, Deploy)의 주요 역할과 파일 연결
-
 FastAPI 미들웨어 / 히스토리 관리, LangGraph 워크플로우, RAG/Tool/LLM 호출 흐름
+
 ---
 ## 🐳 Docker
 
@@ -590,11 +582,11 @@ UI 사이드바의 **Sync Content** 버튼은 더 이상 `build_or_load_vectorst
 -   **원인**: 이전에 실행한 API 서버가 아직 종료되지 않고 해당 포트를 계속 사용하고 있는 경우입니다.
 -   **해결 방법**: 아래 명령어로 기존에 실행 중인 API 서버 프로세스를 종료한 후 다시 실행합니다.
     ```bash
-    pkill -f helpdesk_bot.api
+    pkill -f platform_service.api
     ```
 
 ### 2. `ModuleNotFoundError` 또는 `File does not exist`
--   **원인**: 명령어를 프로젝트 최상위 폴더(예: `helpdesk-bot-project`)가 아닌 다른 위치에서 실행했거나, 가상환경에 프로젝트가 제대로 설치되지 않았기 때문입니다.
+-   **원인**: 명령어를 프로젝트 최상위 폴더(예: `service-desk-assistant`)가 아닌 다른 위치에서 실행했거나, 가상환경에 프로젝트가 제대로 설치되지 않았기 때문입니다.
 -   **해결 방법**:
     1.  `cd` 명령어로 `pyproject.toml` 파일이 있는 **프로젝트 최상위 폴더로 이동**합니다.
     2.  가상환경을 활성화합니다: `source .venv/bin/activate`
