@@ -1,6 +1,7 @@
 # 🌞 사내 헬프데스크 챗봇 (RAG + LangGraph)
 
-이 프로젝트는 LangChain, FastAPI, Streamlit을 활용하여 구축된 사내 헬프데스크 챗봇 애플리케이션입니다. RAG(검색 증강 생성) 기술을 사용하여 사내 문서 기반의 답변을 제공하고, 특정 요청에 대해서는 미리 정의된 기능을 실행하는 에이전트 역할을 수행합니다.
+이 프로젝트는 LangChain, FastAPI, Streamlit을 활용하여 구축된 사내 헬프데스크 챗봇 애플리케이션입니다. 
+RAG(검색 증강 생성) 기술을 사용하여 사내 문서 기반의 답변을 제공하고, 특정 요청에 대해서는 미리 정의된 기능을 실행하는 에이전트 역할을 수행합니다.
 
 -   **UI**: Streamlit
 -   **Backend API**: FastAPI
@@ -80,7 +81,7 @@ service-desk-assistant/
 ├── kb_default/               # 📚 기본 지식 (Git 관리)
 │   └── faq_data.csv
 ├── kb_data/                  # 🗂️ 동적/대용량 지식 
-├── index/                    # 🗂️ FAISS 벡터 인덱스 저장소
+├── indexes/                  # 🗂️ FAISS 벡터 인덱스 저장소
 └── logs/                     # 🪵 로그 파일
 
 ```

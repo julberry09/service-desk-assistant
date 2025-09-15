@@ -5,8 +5,8 @@ __pycache__
 *.pyd
 *.log
 *.sqlite3
-index/*.faiss
-index/*.pkl
+indexes/*.faiss
+indexes/*.pkl
 .kaggle
 .cache
 .git

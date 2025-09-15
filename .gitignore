@@ -17,7 +17,7 @@ logs/
 *.log
 
 # Vectorstore index files
-index/
+indexes/
 
 # OS-specific files
 .DS_Store
