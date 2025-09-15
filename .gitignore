@@ -3,7 +3,7 @@
 .venv/
 
 # Local environment variables
-
+.env
 
 # Python build artifacts and cache
 __pycache__/
@@ -22,15 +22,9 @@ index/
 # OS-specific files
 .DS_Store
 
-# .gitignore
-.env
-
 # IDE settings folder
 .vscode/
 .idea/
-
-
-
 
 # User-uploaded or large knowledge base files
 kb_data/

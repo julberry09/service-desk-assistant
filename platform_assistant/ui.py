@@ -1,11 +1,6 @@
 # platform_assistant/ui.py
 
 import os
-# import sys
-# from pathlib import Path
-# BASE_DIR = Path(__file__).resolve().parents[1]  # platform_assistant의 상위 = 프로젝트 루트
-# SRC_DIR = BASE_DIR / "platform_service"
-# sys.path.insert(0, str(BASE_DIR))  # 루트를 sys.path에 추가해야 함
 import streamlit as st
 import httpx
 import uuid
@@ -14,15 +9,18 @@ from dotenv import load_dotenv
 # =============================================================
 # 환경 변수 로드 & 기본 설정
 # =============================================================
+# 환경 변수 초기화 (.env → os.environ)
 load_dotenv()
-API_BASE_URL = f"http://{os.getenv('API_CLIENT_HOST', 'localhost')}:{os.getenv('API_PORT', '8000')}"
+
+# API URL
+API_BASE_URL = f"http://{os.getenv('API_CLIENT_HOST', '')}:{os.getenv('API_PORT', '')}"
 
 # =============================================================
 # 유틸 함수
 # =============================================================
 @st.cache_data(ttl=60)
 def check_api_health() -> bool:
-    """API 서버 헬스체크 (60초 캐시)"""
+    """API 서버 헬스체크 (/health)"""
     try:
         with httpx.Client(timeout=5.0) as client:
             resp = client.get(f"{API_BASE_URL}/health")
@@ -72,9 +70,9 @@ def main():
     #     st.error("API 서버가 실행 중이지 않습니다. FastAPI 서버를 먼저 실행하세요.")
     # else:
     #     st.success("API 서버 연결됨")
-
+    
     # ---------------------------------------------------------
-    # 글로벌 스타일 (버튼 왼쪽 정렬)
+    # 사이드바
     # ---------------------------------------------------------
     st.markdown(
         """
@@ -85,10 +83,6 @@ def main():
         """,
         unsafe_allow_html=True
     )
-
-    # ---------------------------------------------------------
-    # 사이드바
-    # ---------------------------------------------------------
     with st.sidebar:
         st.header("🎓 AI 학습시키기")
 
