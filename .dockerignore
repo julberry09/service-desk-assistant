@@ -1,0 +1,14 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+indexes/*.faiss
+indexes/*.pkl
+.kaggle
+.cache
+.git
+.gitignore
+.DS_Store
