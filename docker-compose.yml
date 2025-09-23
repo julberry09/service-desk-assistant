@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: sda-api
+    environment:
+      - API_SERVER_HOST=0.0.0.0
+      - API_PORT=8000
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./kb_data:/app/kb_data
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: sda-ui
+    environment:
+      - API_CLIENT_HOST=api
+      - API_PORT=8000
+    ports:
+      - "8507:8507"
+    depends_on:
+      - api
+    restart: unless-stopped

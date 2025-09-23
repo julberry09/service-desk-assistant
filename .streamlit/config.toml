@@ -1,0 +1,17 @@
+# .streamlit/config.toml
+
+[server]
+headless = false
+#port = 8507
+#address = "0.0.0.0"
+
+[client]
+toolbarMode = "minimal"
+
+[theme]
+# 사이드바의 너비를 픽셀(pixel) 단위로 설정합니다. (기본값: 304)
+sidebarWidth = 350
+primaryColor = "#4CAF50"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#000000"
