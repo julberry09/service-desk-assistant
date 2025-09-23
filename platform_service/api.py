@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================
-# 1. FastAPI 앱 설정 - server/config.py (Config & 초기화)
+# 1. FastAPI 앱 설정 - server/config.py (Config & 초기화) 
 # - FastAPI 앱 생성 및 lifespan 이벤트 정의
 # =============================================================
 # 서비스 개발 및 패키징 - FastAPI를 활용하여 백엔드 API 구성 [checklist: 11]
