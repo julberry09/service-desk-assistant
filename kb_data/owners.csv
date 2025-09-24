@@ -1,0 +1,4 @@
+screen,owner,email,phone
+인사시스템-사용자관리,홍길동,owner.hr@example.com,010-1234-5678
+재무시스템-정산화면,김재무,owner.fa@example.com,010-2222-3333
+포털-공지작성,박운영,owner.ops@example.com,010-9999-0000

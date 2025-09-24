@@ -27,4 +27,4 @@ indexes/
 .idea/
 
 # User-uploaded or large knowledge base files
-kb_data/
+#kb_data/
