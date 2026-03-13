@@ -54,7 +54,7 @@ api = FastAPI(
 class AuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start = _time.time()
-        logger.info("api_request", extra={"extra_data": {"path": request.url.path}})
+ 
         try:
             response = await call_next(request)
             dur = round((_time.time() - start) * 1000)
