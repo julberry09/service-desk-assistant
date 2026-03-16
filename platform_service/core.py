@@ -15,11 +15,9 @@ from dotenv import load_dotenv
 from konlpy.tag import Okt
 
 # LangChain & LangGraph 관련 라이브러리
-from langchain import hub
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain.prompts import PromptTemplate
-from langchain.schema import Document
-from langchain.tools import tool
+from langchain_core.prompts import PromptTemplate
+from langchain_core.documents import Document
+from langchain_core.tools import tool
 from langchain_community.document_loaders import (
     PyPDFLoader, CSVLoader, TextLoader, Docx2txtLoader
 )
